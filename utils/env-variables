@@ -1,0 +1,34 @@
+#!/bin/bash
+
+THIS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+WORKDIR=${CUSTOM_WORKDIR}
+if [ "${WORKDIR}" == "" ]; then
+  # defaults to ./work inside this repository
+  WORKDIR=$(realpath ${THIS_DIR}/../work)
+fi
+
+CERTS_AND_CONFIGS='certs_and_configs'
+TOOLS='tools'
+
+CERTS_AND_CONFIGS_DIR=${WORKDIR}/${CERTS_AND_CONFIGS}
+
+# key length
+RSA_KEYLENGTH=${CUSTOM_RSA_KEYLENGTH}
+if [ "${RSA_KEYLENGTH}" == "" ]; then RSA_KEYLENGTH=8192 ; fi
+
+## default cert names
+CA_CONFIG=${CERTS_AND_CONFIGS_DIR}/ca-config.json
+CA_CSR=${CERTS_AND_CONFIGS_DIR}/ca-csr.json
+CA_BARE=${CERTS_AND_CONFIGS_DIR}/ca
+CA_PUB=${CERTS_AND_CONFIGS_DIR}/ca.pem
+CA_KEY=${CERTS_AND_CONFIGS_DIR}/ca-key.pem
+
+TOOLS_DIR=${WORKDIR}/${TOOLS}
+
+## default TOOL versions and cmd paths
+CFSSL_VERSION=${CUSTOM_CFSSL_VERSION}
+if [ "${CFSSL_VERSION}" == "" ]; then CFSSL_VERSION='1.2' ; fi
+CFSSL_CMD=${TOOLS_DIR}/cfssl-${CFSSL_VERSION}
+CFSSLJSON_CMD=${TOOLS_DIR}/cfssljson-${CFSSL_VERSION}
+CFSSLCERTINFO_CMD=${TOOLS_DIR}/cfssl-certinfo-${CFSSL_VERSION}

@@ -1,0 +1,40 @@
+#!/bin/bash
+
+THIS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+source ${THIS_DIR}/env-variables
+
+function ensure_exists() {
+  echo "ensure_exists"
+  if [ ! -d ${WORKDIR} ]; then
+    mkdir -p ${WORKDIR}
+  fi
+}
+
+function ensure_certs_and_configs_dir_exists() {
+  echo "ensure_certs_and_configs_dir_exists"
+  if [ ! -d ${CERTS_AND_CONFIGS_DIR} ]; then
+    mkdir -p ${CERTS_AND_CONFIGS_DIR}
+  fi
+}
+
+function ensure_tools_dir_exists() {
+  echo "ensure_tools_dir_exists"
+  if [ ! -d ${TOOLS_DIR} ]; then
+    mkdir -p ${TOOLS_DIR}
+  fi
+}
+
+case "$1" in
+  ensure_exists)
+    ensure_exists
+    ;;
+  ensure_certs_and_configs_dir_exists)
+    ensure_certs_and_configs_dir_exists
+    ;;
+  ensure_tools_dir_exists)
+    ensure_tools_dir_exists
+    ;;
+  *)
+    echo "Usage: $0 {WORKDIR='./work' ensure_exists|ensure_certs_and_configs_dir_exists|ensure_tools_dir_exists}"
+esac

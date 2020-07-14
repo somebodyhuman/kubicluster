@@ -11,6 +11,14 @@ function ensure_exists() {
   fi
 }
 
+function ensure_images_dir_exists() {
+  echo "ensure_tools_dir_exists"
+  if [ ! -d ${IMAGES_DIR} ]; then
+    mkdir -p ${IMAGES_DIR}
+  fi
+}
+
+
 function ensure_certs_and_configs_dir_exists() {
   echo "ensure_certs_and_configs_dir_exists"
   if [ ! -d ${CERTS_AND_CONFIGS_DIR} ]; then
@@ -29,6 +37,9 @@ case "$1" in
   ensure_exists)
     ensure_exists
     ;;
+  ensure_images_dir_exists)
+    ensure_images_dir_exists
+    ;;
   ensure_certs_and_configs_dir_exists)
     ensure_certs_and_configs_dir_exists
     ;;
@@ -36,5 +47,5 @@ case "$1" in
     ensure_tools_dir_exists
     ;;
   *)
-    echo "Usage: $0 {WORKDIR='./work' ensure_exists|ensure_certs_and_configs_dir_exists|ensure_tools_dir_exists}"
+    echo "Usage: $0 {WORKDIR='./work' ensure_exists|ensure_images_dir_exists|ensure_certs_and_configs_dir_exists|ensure_tools_dir_exists}"
 esac

@@ -30,10 +30,58 @@ These scripts require the following packages to be installed:
 * private keys are residing inside the master hypervisor and are NOT accessible from within the kubicluster (from controller nodes or worker nodes)
 * load balancer for controller nodes is integrated into the first controller node on the master hypervisor
 
-* **010_on_hypervisor_generate_certs_and_configs.sh:**
-  * installs cfssl on the master hypervisor
-  * checks if cfssl is installed / otherwise it installs it again
-  * generates a certificate authority, the required certificates
+## What each script is doing
+
+### 000_prepare_hypervisor.sh
+* installs kvm, virsh, libvirt-qemu
+* install dependencies curl
+* puts the base image for all vms into the default location ./work/imgs/vm-template.(img|qcow2|...)
+
+**NOTE: install_dependencies and setup_virtualisation should run on any debian/ubuntu hypervisor without problems, for other distros you need to execute the corresponding commands yourself, or better yet - submit a PR to this repo ;-)**
+
+***Usage***:
+```bash
+./000_prepare_hypervisor.sh install_dependencies
+./000_prepare_hypervisor.sh setup_virtualisation
+# set_vm_template file_path ip_of_template
+# warns you if the template exists already on the hypervisor
+./000_prepare_hypervisor.sh set_vm_template /path/to/file.(img|qcow2|...) 192.168.122.254
+
+# run all three subcommands in the correct order: install_dependencies, setup_virtualisation, set_vm_template
+./000_prepare_hypervisor.sh /path/to/file.qcow2 192.168.122.254
+```
+
+### 010_on_hypervisor_generate_certs_and_configs.sh
+* installs cfssl on the master hypervisor
+* checks if cfssl is installed / otherwise it installs it again
+* generates a certificate authority and the required certificates
+
+***Usage***:
+```bash
+# turn the current hypervisor into the certificate authority
+./010_on_hypervisor_generate_certs_and_configs.sh generate_ca
+
+# ensure certs needed to setup the system exist, this generates a cert for the following entitites: admin kube-controller-man kube-proxy kube-scheduler
+# certs are placed in ./work/certs_and_configs
+# already existing certs are NOT overwritten
+# if you want to regenerate an existing certificate delete it first inside ./work/certs_and_configs
+./010_on_hypervisor_generate_certs_and_configs.sh generate_system_certs
+
+# ensure certs needed for the workers given as arguments exist (format: hostname=ip_on_hypervisor)
+# certs are placed in ./work/certs_and_configs
+# already existing certs are NOT overwritten
+# if you want to regenerate an existing certificate delete it first inside ./work/certs_and_configs
+# note: you manage IP allocation, so be sure you do not have IP conflicts between worker nodes on the same hypervisor
+./010_on_hypervisor_generate_certs_and_configs.sh generate_worker_certs kubenode-0001=192.168.122.11 kubenode-0002=192.168.122.12
+
+# run all subcommands at once in the correct order: generate_ca, generate_system_certs, generate_worker_certs
+./010_on_hypervisor_generate_certs_and_configs.sh kubenode-0001=192.168.122.11 kubenode-0002=192.168.122.12
+
+# the following env variables can be set to adjust the results of any command of this script
+# the values used here are the default values, if you would not explicitely set the variable
+CUSTOM_RSA_KEYLENGTH=2048 CUSTOM_CFSSL_VERSION=1.2 ./010_on_hypervisor_generate_certs_and_configs.sh kubenode-0001=192.168.122.11 kubenode-0002=192.168.122.12
+```
+
 
 ## Example workflows:
 

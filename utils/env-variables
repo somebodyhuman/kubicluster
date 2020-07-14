@@ -8,8 +8,12 @@ if [ "${WORKDIR}" == "" ]; then
   WORKDIR=$(realpath ${THIS_DIR}/../work)
 fi
 
+IMAGES='images'
 CERTS_AND_CONFIGS='certs_and_configs'
 TOOLS='tools'
+
+IMAGES_DIR=${WORKDIR}/${IMAGES}
+TEMPLATE_IP_FILE=${WORKDIR}/${IMAGES}/vm-template-ip.txt
 
 CERTS_AND_CONFIGS_DIR=${WORKDIR}/${CERTS_AND_CONFIGS}
 

@@ -105,7 +105,7 @@ case "$1" in
     generate_system_certs admin kube-controller-man kube-proxy kube-scheduler
     ;;
   generate_worker_certs)
-    generate_worker_certs
+    generate_worker_certs "${@:2}"
     ;;
   help)
     # TODO improve documentation
@@ -114,5 +114,5 @@ case "$1" in
   *)
     generate_ca
     generate_system_certs admin kube-controller-man kube-proxy kube-scheduler
-    generate_worker_certs "${@:1}"
+    generate_worker_certs "${@:2}"
 esac

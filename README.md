@@ -79,9 +79,9 @@ These scripts require the following packages to be installed:
 
 # the following env variables can be set to adjust the results of any command of this script
 # the values used here are the default values, if you would not explicitely set the variable
-CUSTOM_RSA_KEYLENGTH=2048 CUSTOM_CFSSL_VERSION=1.2 ./010_on_hypervisor_generate_certs_and_configs.sh kubenode-0001=192.168.122.11 kubenode-0002=192.168.122.12
+# the controller ip can be the ip of a specific controller or of a load balancer in front of the controllers
+CUSTOM_RSA_KEYLENGTH=2048 CUSTOM_CFSSL_VERSION=1.2 ./010_on_hypervisor_generate_certs_and_configs.sh --controller-ip=192.168.122.2 kubenode-0001=192.168.122.11 kubenode-0002=192.168.122.12
 ```
-
 
 ## Example workflows:
 

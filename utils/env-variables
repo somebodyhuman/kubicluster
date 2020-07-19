@@ -14,6 +14,11 @@ TOOLS='tools'
 
 IMAGES_DIR=${WORKDIR}/${IMAGES}
 TEMPLATE_IP_FILE=${WORKDIR}/${IMAGES}/vm-template-ip.txt
+TEMPLATE_XML=conf/vm-template.xml
+VIRT_STORAGE_DIR=/var/lib/libvirt/images
+VM_CONFIGS='vm_configs'
+VM_CONFIGS_DIR=${WORKDIR}/${VM_CONFIGS}
+
 CERTS_AND_CONFIGS_DIR=${WORKDIR}/${CERTS_AND_CONFIGS}
 
 # key length

@@ -83,6 +83,15 @@ These scripts require the following packages to be installed:
 CUSTOM_RSA_KEYLENGTH=2048 CUSTOM_CFSSL_VERSION=1.2 ./010_on_hypervisor_generate_certs_and_configs.sh --controller-ip=192.168.122.2 kubenode-0001=192.168.122.11 kubenode-0002=192.168.122.12
 ```
 
+### 011_on_hypervisor_create_vms.sh
+* creates vms on the hypervisor using virsh, a template image and a template xml (if you want to use a new template you have to run `000_prepare_hypervisor.sh` again)
+
+***Usage***:
+```bash
+# create a vm on the master hypervisor (format hostname=ip)
+./011_on_hypervisor_create_vms.sh kubenode-0001=192.168.122.11 kubenode-0002=192.168.122.12
+```
+
 ## Example workflows:
 
 The following example workflows show you how to setup different kinds of networks and how to scale them up and down.

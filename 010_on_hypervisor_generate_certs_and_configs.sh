@@ -87,7 +87,7 @@ EOF
     fi
     config_file=${CERTS_AND_CONFIGS_DIR}/${component}.kubeconfig
     SERVER_IP='127.0.0.1'
-    if [ "${component}" == "kube-proxy" ]; then SERVER_IP=${CLUSTER_IP}; fi
+    if [ "${component}" == "kube-proxy" ]; then SERVER_IP=${CONTROLLER_IP}; fi
     if [ ! -e ${config_file} ]; then
       kubectl config set-cluster ${CLUSTER_NAME} --server=https://${SERVER_IP}:6443 \
         --certificate-authority=${CERTS_AND_CONFIGS_DIR}/ca.pem \
@@ -131,7 +131,7 @@ EOF
     fi
     config_file=${CERTS_AND_CONFIGS_DIR}/${worker_name_ip[0]}.kubeconfig
     if [ ! -e ${config_file} ]; then
-      kubectl config set-cluster ${CLUSTER_NAME} --server=https://${CLUSTER_IP}:6443 \
+      kubectl config set-cluster ${CLUSTER_NAME} --server=https://${CONTROLLER_IP}:6443 \
         --certificate-authority=${CERTS_AND_CONFIGS_DIR}/ca.pem \
         --embed-certs=true --kubeconfig=${config_file}
 
@@ -194,7 +194,7 @@ case "$1" in
     ;;
   help)
     # TODO improve documentation
-    echo "Usage: $0 {[WORKDIR='./work'] generate_ca|for_system_components (-cip=|--controller_ip=x.x.x.x)|for_worker_nodes (-cip=|--controller_ip=x.x.x.x)}"
+    echo "Usage: $0 {[WORKDIR='./work'] [generate_ca|for_system_components (-cip=|--controller_ip=x.x.x.x)|for_worker_nodes (-cip=|--controller_ip=x.x.x.x)]}"
     ;;
   *)
     # TODO check for -cip/--controller-ip and exit if not specified

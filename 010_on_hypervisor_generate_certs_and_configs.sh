@@ -65,6 +65,32 @@ EOF
   fi
 }
 
+function generate_encryption_configs() {
+  for conf in "$@"
+  do
+    CFILE="${CERTS_AND_CONFIGS_DIR}/$conf.yaml"
+    if [ -e ${CFILE} ]; then
+      echo "encryption config ${conf} exists already"
+    else
+      echo "generating encryption config ${conf}"
+      ENCRYPTION_KEY=$(head -c 32 /dev/urandom | base64)
+      cat >${CFILE} << EOF
+kind: EncryptionConfig
+apiVersion: v1
+resources:
+  - resources:
+      - secrets
+    providers:
+      - aescbc:
+          keys:
+            - name: key1
+              secret: ${ENCRYPTION_KEY}
+      - identity: {}
+EOF
+    fi
+  done
+}
+
 # using the certificate authority to create all the needed signed certificates
 GENCERT_ARGS="-ca=${CA_PUB} -ca-key=${CA_KEY} -config=${CA_CONFIG} -profile=kubicluster"
 function generate_cert() {
@@ -189,12 +215,17 @@ done
 CERT_HOSTNAME="${CONTROLLER_IP},${CONTROLLER_HOSTNAME}"
 CERT_HOSTNAME="${CERT_HOSTNAME},127.0.0.1,localhost,kubernetes.default"
 
-case "${REMAINING_ARGS[0]}" in
+RARGS_ARRAY=($(echo $REMAINING_ARGS | tr " " "\n"))
+echo "running: ${RARGS_ARRAY[0]}"
+case "${RARGS_ARRAY[0]}" in
   generate_ca)
     generate_ca
     ;;
+  generate_encryption_configs)
+    generate_encryption_configs "${RARGS_ARRAY[@]:1}"
+    ;;
   generate_cert)
-    generate_cert "${REMAINING_ARGS[0]:1}"
+    generate_cert "${RARGS_ARRAY[@]:1}"
     ;;
   for_system_components)
     # TODO check for -cip/--controller-ip and exit if not specified
@@ -213,6 +244,7 @@ case "${REMAINING_ARGS[0]}" in
     # TODO check for -cip/--controller-ip and exit if not specified
     # TODO check for -n/--node and exit if not specified
     generate_ca
+    generate_encryption_configs encryption-config
     generate_cert service-account
     generate_cert kubernetes -hostname=${CERT_HOSTNAME}
     for_system_components admin kube-controller-man kube-proxy kube-scheduler

@@ -67,30 +67,34 @@ EOF
 
 # using the certificate authority to create all the needed signed certificates
 GENCERT_ARGS="-ca=${CA_PUB} -ca-key=${CA_KEY} -config=${CA_CONFIG} -profile=kubicluster"
+function generate_cert() {
+  if [ ! -e ${CERTS_AND_CONFIGS_DIR}/$1.pem ]; then
+    echo "generating_cert for ${1}"
+    cat > ${CERTS_AND_CONFIGS_DIR}/$1-csr.json << EOF
+{
+"CN": "$1",
+"key": { "algo": "rsa", "size": ${RSA_KEYLENGTH} },
+"names": [ { "O": "system:$1" } ]
+}
+EOF
+    ${CFSSL_CMD} gencert ${GENCERT_ARGS} $2 ${CERTS_AND_CONFIGS_DIR}/$1-csr.json | ${CFSSLJSON_CMD} -bare ${CERTS_AND_CONFIGS_DIR}/$1
+  else
+    echo "cert for $1 exists already"
+  fi
+}
 
 function for_system_components() {
   # TODO make the certs configurable and adjustable
   for component in "$@"
   do
-    if [ ! -e ${CERTS_AND_CONFIGS_DIR}/${component}.pem ]; then
-      echo "generating_cert for ${component}"
-      cat > ${CERTS_AND_CONFIGS_DIR}/${component}-csr.json << EOF
-{
-  "CN": "${component}",
-  "key": { "algo": "rsa", "size": ${RSA_KEYLENGTH} },
-  "names": [ { "O": "system:${component}" } ]
-}
-EOF
-      ${CFSSL_CMD} gencert ${GENCERT_ARGS} ${CERTS_AND_CONFIGS_DIR}/${component}-csr.json | ${CFSSLJSON_CMD} -bare ${CERTS_AND_CONFIGS_DIR}/${component}
-    else
-      echo "cert for ${component} exists already"
-    fi
+    generate_cert ${component}
+
     config_file=${CERTS_AND_CONFIGS_DIR}/${component}.kubeconfig
     SERVER_IP='127.0.0.1'
     if [ "${component}" == "kube-proxy" ]; then SERVER_IP=${CONTROLLER_IP}; fi
     if [ ! -e ${config_file} ]; then
       kubectl config set-cluster ${CLUSTER_NAME} --server=https://${SERVER_IP}:6443 \
-        --certificate-authority=${CERTS_AND_CONFIGS_DIR}/ca.pem \
+        --certificate-authority=${CA_PUB} \
         --embed-certs=true --kubeconfig=${config_file}
 
       kubectl config set-credentials system:${component} \
@@ -132,7 +136,7 @@ EOF
     config_file=${CERTS_AND_CONFIGS_DIR}/${worker_name_ip[0]}.kubeconfig
     if [ ! -e ${config_file} ]; then
       kubectl config set-cluster ${CLUSTER_NAME} --server=https://${CONTROLLER_IP}:6443 \
-        --certificate-authority=${CERTS_AND_CONFIGS_DIR}/ca.pem \
+        --certificate-authority=${CA_PUB} \
         --embed-certs=true --kubeconfig=${config_file}
 
       kubectl config set-credentials system:node:${worker_name_ip[0]} \
@@ -154,13 +158,16 @@ EOF
 
 REMAINING_ARGS=''
 NODES=''
-CLUSTER_NAME=''
+CLUSTER_NAME='kubicluster'
 # As long as there is at least one more argument, keep looping
 while [[ $# -gt 0 ]]; do
     key="$1"
     case "$key" in
         -cip=*|--controller-ip=*)
         CONTROLLER_IP="${key#*=}"
+        ;;
+        -chn=*|--controller-hostname=*)
+        CONTROLLER_HOSTNAME="${key#*=}"
         ;;
         -cl=*|--cluster=*)
         CLUSTER_NAME="${key#*=}"
@@ -170,18 +177,24 @@ while [[ $# -gt 0 ]]; do
         NODES="${NODES} $1"
         ;;
         *)
-        REMAINING_ARGS="${REMAINING_ARGS} $key"
+        PL=' ' ; if [ "${REMAINING_ARGS}" == "" ]; then PL=''; fi
+        REMAINING_ARGS="${REMAINING_ARGS}${PL}$key"
         ;;
     esac
     # Shift after checking all the cases to get the next option
     shift
 done
 
-if [ "${CLUSTER_NAME}" == "" ]; then CLUSTER_NAME='kubicluster'; fi
+# TODO support cluster of controllers and take first -cip as master controller
+CERT_HOSTNAME="${CONTROLLER_IP},${CONTROLLER_HOSTNAME}"
+CERT_HOSTNAME="${CERT_HOSTNAME},127.0.0.1,localhost,kubernetes.default"
 
-case "$1" in
+case "${REMAINING_ARGS[0]}" in
   generate_ca)
     generate_ca
+    ;;
+  generate_cert)
+    generate_cert "${REMAINING_ARGS[0]:1}"
     ;;
   for_system_components)
     # TODO check for -cip/--controller-ip and exit if not specified
@@ -194,12 +207,15 @@ case "$1" in
     ;;
   help)
     # TODO improve documentation
-    echo "Usage: $0 {[WORKDIR='./work'] [generate_ca|for_system_components (-cip=|--controller_ip=x.x.x.x)|for_worker_nodes (-cip=|--controller_ip=x.x.x.x)]}"
+    echo "Usage: $0 {[WORKDIR='./work'] [generate_ca|generate_cert NAME (ADDITIONAL_CFSSL_ARGS)|for_system_components (-cip=|--controller_ip=x.x.x.x)|for_worker_nodes (-cip=|--controller_ip=x.x.x.x)]}"
     ;;
   *)
     # TODO check for -cip/--controller-ip and exit if not specified
     # TODO check for -n/--node and exit if not specified
     generate_ca
+    generate_cert service-account
+    generate_cert kubernetes -hostname=${CERT_HOSTNAME}
     for_system_components admin kube-controller-man kube-proxy kube-scheduler
     for_worker_nodes
+    ;;
 esac

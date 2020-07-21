@@ -6,8 +6,8 @@ source ${DIR}/utils/env-variables
 
 REMAINING_ARGS=''
 VMS=''
-VCPUS=''
-VMEM=''
+VCPUS='1'
+VMEM='4194304'
 QEMU_TYPE='qcow2'
 # As long as there is at least one more argument, keep looping
 while [[ $# -gt 0 ]]; do
@@ -26,9 +26,6 @@ while [[ $# -gt 0 ]]; do
     # Shift after checking all the cases to get the next option
     shift
 done
-
-if [ "${VCPUS}" == "" ]; then VCPUS='1' ; fi
-if [ "${VMEM}" == "" ]; then VMEM='4194304' ; fi
 
 TEMPLATE_ROOT_SSH_KEY=${IMAGES_DIR}/vm-template_rsa
 MAX_ATTEMPTS=18

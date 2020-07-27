@@ -31,11 +31,14 @@ while [[ $# -gt 0 ]]; do
         -cp=*|--client-port=*)
         CLIENT_PORT="${key#*=}"
         ;;
+        -v=*|--version=*)
+        KUBERNETES_VERSION="${key#*=}"
+        ;;
         -f|--force-update)
         FORCE_UPDATE=true
         ;;
         -cmu=*|--cluster-member-uri=*)
-        PL=',' ; if [ "${INITIAL_ETCD_CLUSTER}" == "" ]; then PL=''; fi
+        PL=',' ; if [ "${INITIAL_ETCD_CLUSTER}" = "" ]; then PL=''; fi
         INITIAL_ETCD_CLUSTER="${INITIAL_ETCD_CLUSTER}${PL}${key#*=}"
         ;;
         *)
@@ -58,7 +61,6 @@ KUBERNETES_PARENT_DIR=${NODE_WORK_DIR}/kubernetes-${KUBERNETES_VERSION}
 KUBERNETES_DIR=${KUBERNETES_PARENT_DIR}/kubernetes
 KUBERNETES_SERVER_DIR=${KUBERNETES_DIR}/server
 
-if [ ! -d /var/lib/kubernetes ]; then mkdir -p /var/lib/kubernetes; fi
 if [ ! -d ${NODE_WORK_DIR} ]; then mkdir -p ${NODE_WORK_DIR}; fi
 
 if [ ! -f ${NODE_WORK_DIR}/kubernetes-${KUBERNETES_VERSION}.tar.gz ]; then
@@ -246,7 +248,7 @@ fi
 COMPS_STATUS=$(kubectl get componentstatuses --kubeconfig ${CERTS_AND_CONFIGS_DIR}/admin.kubeconfig)
 API_SERVER_STATUS=$(echo -e "${COMPS_STATUS}" | grep STATUS)
 
-if [ "${API_SERVER_STATUS}" == "" ]; then
+if [ "${API_SERVER_STATUS}" = "" ]; then
   echo "Error: API Server not healthy or not reachable:"
   echo "${COMPS_STATUS}"
   exit 1
@@ -255,7 +257,7 @@ else
   EXIT_CODE=0
   for component in etcd controller-manager scheduler; do
     COMP_STATUS=$(echo -e "${COMPS_STATUS}" | grep ${component} | grep Healthy)
-    if [ "${COMP_STATUS}" == "" ]; then
+    if [ "${COMP_STATUS}" = "" ]; then
       echo "Error: ${component} not healthy or not reachable:"
       echo "${COMP_STATUS}"
       EXIT_CODE=$((${EXIT_CODE} + 1))

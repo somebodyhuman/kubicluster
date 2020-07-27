@@ -21,6 +21,9 @@ case "$1" in
   ensure_certs_and_configs_dir_exists)
     ensure_exists ${CERTS_AND_CONFIGS_DIR}
     ;;
+  ensure_certs_and_configs_mirror_dir_exists)
+    ensure_exists ${CERTS_AND_CONFIGS_MIRROR_DIR}
+    ;;
   ensure_tools_dir_exists)
     ensure_exists ${TOOLS_DIR}
     ;;

@@ -4,9 +4,6 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 source ${DIR}/utils/env-variables
 
-########################
-# Distributing the Certificate File
-
 SCRIPTS='scripts'
 SCRIPTS_DIR="./${SCRIPTS}"
 

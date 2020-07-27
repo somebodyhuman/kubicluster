@@ -40,6 +40,45 @@ function update_configs() {
   done
 }
 
+function install_kata() {
+  for node in ${NODES}; do
+    name_ip=($(echo $node | tr "=" "\n"))
+
+    ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/worker/setup_kata.sh"
+  done
+}
+
+function install_containerd() {
+  CONTAINERD_VERSION='1.3.6'
+  while [[ $# -gt 0 ]]; do
+      key="$1"
+      echo $key
+      case "$key" in
+        -cv=*|--containerd-version=*)
+        CLIENT_PORT="${key#*=}"
+        ;;
+        -f|--force-update)
+        FORCE_UPDATE=true
+        ;;
+        *)
+        # do nothing
+        ;;
+      esac
+      # Shift after checking all the cases to get the next option
+      shift
+  done
+
+  PARAMS=''
+  if [ "${CONTAINERD_VERSION}" != "1.3.6" ]; then PARAMS="${PARAMS} -v=${CONTAINERD_VERSION}"; fi
+  if [ "${FORCE_UPDATE}" = true ]; then PARAMS="${PARAMS} -f"; fi
+
+  for node in ${NODES}; do
+    name_ip=($(echo $node | tr "=" "\n"))
+
+    ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/worker/setup_containerd.sh -nwd=${NODE_WORK_DIR}${PARAMS}"
+  done
+}
+
 REMAINING_ARGS=''
 CONTROLLERS='' ; NODES=''
 CLUSTER_NAME='kubicluster'
@@ -81,14 +120,22 @@ case "${RARGS_ARRAY[0]}" in
     # TODO check for -cip/--controller-ip and exit if not specified
     update_configs "${RARGS_ARRAY[@]:1}"
     ;;
+  install_kata)
+    install_kata
+    ;;
+  install_containerd)
+    install_containerd "${RARGS_ARRAY[@]:1}"
+    ;;
   help)
     # TODO improve documentation
-    echo "Usage: $0 {[WORKDIR='./work'] [update_scripts_in_node|update_certs|update_configs]}"
+    echo "Usage: $0 {[WORKDIR='./work'] [update_scripts_in_node|update_certs|update_configs|install_kata|install_containerd]}"
     ;;
   *)
     update_scripts_in_nodes
     # TODO check for -cip/--controller-ip and exit if not specified
     update_certs ca kubernetes service-accounts
     update_configs kube-proxy.kubeconfig
+    install_kata
+    install_containerd
     ;;
 esac

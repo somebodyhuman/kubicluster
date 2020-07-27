@@ -9,6 +9,7 @@ VMS=''
 VCPUS='1'
 VMEM='4194304'
 QEMU_TYPE='qcow2'
+VIRT_STORAGE_DIR=/var/lib/libvirt/images
 # As long as there is at least one more argument, keep looping
 while [[ $# -gt 0 ]]; do
     key="$1"
@@ -18,6 +19,9 @@ while [[ $# -gt 0 ]]; do
         ;;
         -m=*|--mem=*)
         VMEM="${key#*=}"
+        ;;
+        -sd=*|--storage-dir=*)
+        VIRT_STORAGE_DIR="${key#*=}"
         ;;
         *)
         REMAINING_ARGS="${REMAINING_ARGS} $key"

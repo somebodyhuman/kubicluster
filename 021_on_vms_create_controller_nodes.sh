@@ -49,14 +49,14 @@ function update_configs() {
 
         if [ -e ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]}/${config} ]; then
           if ! diff ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]}/${config} ${CERTS_AND_CONFIGS_DIR}/${config}; then
-            PL=', ' ; if [ "${DIFFERS_ON}" == "" ]; then PL=''; fi
+            PL=', ' ; if [ "${DIFFERS_ON}" = "" ]; then PL=''; fi
             DIFFERS_ON="${DIFFERS_ON}${PL}${node}"
           else
-            PL=', ' ; if [ "${SAME_ON}" == "" ]; then PL=''; fi
+            PL=', ' ; if [ "${SAME_ON}" = "" ]; then PL=''; fi
             SAME_ON="${SAME_ON}${PL}${node}"
           fi
         else
-          PL=', ' ; if [ "${NOT_YET_ON}" == "" ]; then PL=''; fi
+          PL=', ' ; if [ "${NOT_YET_ON}" = "" ]; then PL=''; fi
           NOT_YET_ON="${NOT_YET_ON}${PL}${node}"
         fi
       done
@@ -206,7 +206,7 @@ while [[ $# -gt 0 ]]; do
         FORCE_ETCD_DATA_RESET=true
         ;;
         *)
-        PL=' ' ; if [ "${REMAINING_ARGS}" == "" ]; then PL=''; fi
+        PL=' ' ; if [ "${REMAINING_ARGS}" = "" ]; then PL=''; fi
         REMAINING_ARGS="${REMAINING_ARGS}${PL}$key"
         ;;
     esac

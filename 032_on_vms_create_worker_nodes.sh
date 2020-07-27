@@ -18,10 +18,12 @@ function update_scripts_in_nodes() {
 
 function update_certs() {
   CERTS=''
-  echo "updating certs: $@"
   for node in ${NODES}; do
     name_ip=($(echo $node | tr "=" "\n"))
     CERTS="${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}.pem ${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-key.pem"
+    for cert in "$@"; do CERTS="${CERTS} ${CERTS_AND_CONFIGS_DIR}/${cert}.pem" ; done
+    echo "updating certs: ${name_ip[0]} $@"
+
     ${SSH_CMD} root@${name_ip[1]} "if [ ! -d ${NODE_CERTS_AND_CONFIGS_DIR} ]; then mkdir -p ${NODE_CERTS_AND_CONFIGS_DIR}; fi"
     ${SCP_CMD} ${CERTS} root@${name_ip[1]}:${NODE_CERTS_AND_CONFIGS_DIR}
   done
@@ -50,12 +52,13 @@ function install_kata() {
 
 function install_containerd() {
   CONTAINERD_VERSION='1.3.6'
+  FORCE_UPDATE=false
   while [[ $# -gt 0 ]]; do
       key="$1"
       echo $key
       case "$key" in
         -cv=*|--containerd-version=*)
-        CLIENT_PORT="${key#*=}"
+        CONTAINERD_VERSION="${key#*=}"
         ;;
         -f|--force-update)
         FORCE_UPDATE=true
@@ -79,6 +82,38 @@ function install_containerd() {
   done
 }
 
+function install_kubernetes_worker() {
+  KUBERNETES_VERSION='1.18.5'
+  FORCE_UPDATE=false
+  while [[ $# -gt 0 ]]; do
+      key="$1"
+      echo $key
+      case "$key" in
+        -v=*|--version=*)
+        KUBERNETES_VERSION="${key#*=}"
+        ;;
+        -f|--force-update)
+        FORCE_UPDATE=true
+        ;;
+        *)
+        # do nothing
+        ;;
+      esac
+      # Shift after checking all the cases to get the next option
+      shift
+  done
+
+  PARAMS=''
+  if [ "${KUBERNETES_VERSION}" != "1.18.5" ]; then PARAMS="${PARAMS} -v=${KUBERNETES_VERSION}"; fi
+  if [ "${FORCE_UPDATE}" = true ]; then PARAMS="${PARAMS} -f"; fi
+
+  for node in ${NODES}; do
+    name_ip=($(echo $node | tr "=" "\n"))
+
+    ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/worker/setup_kubernetes_worker.sh -nwd=${NODE_WORK_DIR}${PARAMS}"
+  done
+}
+
 REMAINING_ARGS=''
 CONTROLLERS='' ; NODES=''
 CLUSTER_NAME='kubicluster'
@@ -99,7 +134,7 @@ while [[ $# -gt 0 ]]; do
         NODES="${NODES} $1"
         ;;
         *)
-        PL=' ' ; if [ "${REMAINING_ARGS}" == "" ]; then PL=''; fi
+        PL=' ' ; if [ "${REMAINING_ARGS}" = "" ]; then PL=''; fi
         REMAINING_ARGS="${REMAINING_ARGS}${PL}$key"
         ;;
     esac
@@ -114,7 +149,7 @@ case "${RARGS_ARRAY[0]}" in
     update_scripts_in_nodes
     ;;
   update_certs)
-    update_certs
+    update_certs "${RARGS_ARRAY[@]:1}"
     ;;
   update_configs)
     # TODO check for -cip/--controller-ip and exit if not specified
@@ -126,16 +161,20 @@ case "${RARGS_ARRAY[0]}" in
   install_containerd)
     install_containerd "${RARGS_ARRAY[@]:1}"
     ;;
+  install_kubernetes_worker)
+    install_kubernetes_worker "${RARGS_ARRAY[@]:1}"
+    ;;
   help)
     # TODO improve documentation
-    echo "Usage: $0 {[WORKDIR='./work'] [update_scripts_in_node|update_certs|update_configs|install_kata|install_containerd]}"
+    echo "Usage: $0 {[WORKDIR='./work'] [update_scripts_in_node|update_certs|update_configs|install_kata|install_containerd|install_kubernetes_worker]}"
     ;;
   *)
     update_scripts_in_nodes
     # TODO check for -cip/--controller-ip and exit if not specified
-    update_certs ca kubernetes service-accounts
+    update_certs ca
     update_configs kube-proxy.kubeconfig
     install_kata
-    install_containerd
+    install_containerd "${RARGS_ARRAY[@]}"
+    install_kubernetes_worker "${RARGS_ARRAY[@]}"
     ;;
 esac

@@ -11,6 +11,15 @@ fi
 IMAGES='images'
 CERTS_AND_CONFIGS='certs_and_configs'
 TOOLS='tools'
+SCRIPTS='scripts'
+SCRIPTS_DIR="./${SCRIPTS}"
+
+## on node
+NODE_WORK_DIR=/opt/kubicluster
+NODE_SCRIPTS_DIR=${NODE_WORK_DIR}/${SCRIPTS}
+NODE_CERTS_AND_CONFIGS_DIR=${NODE_WORK_DIR}/${CERTS_AND_CONFIGS}
+## on controller nodes
+ETCD_DATA_DIR=${NODE_WORK_DIR}/etcd_data
 
 IMAGES_DIR=${WORKDIR}/${IMAGES}
 TEMPLATE_IP_FILE=${WORKDIR}/${IMAGES}/vm-template-ip.txt

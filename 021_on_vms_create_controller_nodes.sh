@@ -4,15 +4,6 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 source ${DIR}/utils/env-variables
 
-SCRIPTS='scripts'
-SCRIPTS_DIR="./${SCRIPTS}"
-
-## on node
-NODE_WORK_DIR=/opt/kubicluster
-NODE_SCRIPTS_DIR=${NODE_WORK_DIR}/${SCRIPTS}
-NODE_CERTS_AND_CONFIGS_DIR=${NODE_WORK_DIR}/${CERTS_AND_CONFIGS}
-ETCD_DATA_DIR=${NODE_WORK_DIR}/etcd_data
-
 function update_scripts_in_nodes() {
   # TODO only update controller scripts
   for node in ${NODES}; do

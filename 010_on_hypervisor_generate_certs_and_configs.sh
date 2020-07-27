@@ -66,6 +66,9 @@ EOF
 }
 
 function generate_encryption_configs() {
+  # TODO link to and explain different encryption used according to https://github.com/kubernetes/kubernetes/issues/66844
+  # TODO switch this to kms according to https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
+  #      because aescbc only moderately improves security of data in etcd
   for conf in "$@"
   do
     CFILE="${CERTS_AND_CONFIGS_DIR}/$conf.yaml"
@@ -94,18 +97,67 @@ EOF
 # using the certificate authority to create all the needed signed certificates
 GENCERT_ARGS="-ca=${CA_PUB} -ca-key=${CA_KEY} -config=${CA_CONFIG} -profile=kubicluster"
 function generate_cert() {
-  if [ ! -e ${CERTS_AND_CONFIGS_DIR}/$1.pem ]; then
-    echo "generating_cert for ${1}"
-    cat > ${CERTS_AND_CONFIGS_DIR}/$1-csr.json << EOF
+  HN_ARG=''
+  CN_O=''
+  while [[ $# -gt 0 ]]; do
+      key="$1"
+      case "$key" in
+          -hostname=*)
+          HN_ARG="${key}"
+          ;;
+          *)
+          PL=' ' ; if [ "${CN_O}" = "" ]; then PL=''; fi
+          CN_O="${CN_O}${PL}${key}"
+          ;;
+      esac
+      # Shift after checking all the cases to get the next option
+      shift
+  done
+  CN_O_ARRAY=($(echo $CN_O | tr " " "\n"))
+  CN_O=${CN_O_ARRAY[0]}
+  NAME_ROLE=($(echo $CN_O | tr "=" "\n"))
+  NAME_PARTS=($(echo ${NAME_ROLE[0]} | tr ":" "\n"))
+  FILE_NAME=${NAME_PARTS[1]} ; if [ "${FILE_NAME}" = "" ]; then FILE_NAME=${NAME_PARTS[0]}; fi
+  if [ ! -e ${CERTS_AND_CONFIGS_DIR}/${FILE_NAME}.pem ]; then
+    echo "generating_cert request for ${NAME_ROLE[0]} into ${FILE_NAME}-csr.json"
+    cat > ${CERTS_AND_CONFIGS_DIR}/${FILE_NAME}-csr.json << EOF
 {
-"CN": "$1",
+"CN": "${NAME_ROLE[0]}",
 "key": { "algo": "rsa", "size": ${RSA_KEYLENGTH} },
-"names": [ { "O": "system:$1" } ]
+"names": [ { "O": "${NAME_ROLE[1]}" } ]
 }
 EOF
-    ${CFSSL_CMD} gencert ${GENCERT_ARGS} $2 ${CERTS_AND_CONFIGS_DIR}/$1-csr.json | ${CFSSLJSON_CMD} -bare ${CERTS_AND_CONFIGS_DIR}/$1
+    ${CFSSL_CMD} gencert ${GENCERT_ARGS} ${HN_ARG} ${CERTS_AND_CONFIGS_DIR}/${FILE_NAME}-csr.json | ${CFSSLJSON_CMD} -bare ${CERTS_AND_CONFIGS_DIR}/${FILE_NAME}
   else
-    echo "cert for $1 exists already"
+    echo "cert for ${NAME_ROLE[0]} exists already"
+  fi
+}
+
+function generate_config() {
+  NAME_PARTS=($(echo ${1} | tr ":" "\n"))
+  NAME=${NAME_PARTS[1]} ; if [ "${NAME}" = "" ]; then NAME=${NAME_PARTS[0]}; fi
+
+  config_file=${CERTS_AND_CONFIGS_DIR}/${NAME}.kubeconfig
+  SERVER_IP='127.0.0.1'
+  if [ "${NAME}" = "kube-proxy" ]; then SERVER_IP=${CONTROLLER_IP}; fi
+  if [ ! -e ${config_file} ]; then
+    echo "generating config for ${NAME} into ${NAME}.kubeconfig"
+    kubectl config set-cluster ${CLUSTER_NAME} --server=https://${SERVER_IP}:6443 \
+      --certificate-authority=${CA_PUB} \
+      --embed-certs=true --kubeconfig=${config_file}
+
+    kubectl config set-credentials ${1} \
+      --client-certificate=${CERTS_AND_CONFIGS_DIR}/${NAME}.pem \
+      --client-key=${CERTS_AND_CONFIGS_DIR}/${NAME}-key.pem \
+      --embed-certs=true --kubeconfig=${config_file}
+
+    kubectl config set-context default --cluster=${CLUSTER_NAME} \
+      --user=${1} \
+      --kubeconfig=${config_file}
+
+    kubectl config use-context default --kubeconfig=${config_file}
+  else
+    echo "kubconfig for ${1} exists already"
   fi
 }
 
@@ -113,29 +165,9 @@ function for_system_components() {
   # TODO make the certs configurable and adjustable
   for component in "$@"
   do
-    generate_cert ${component}
+    generate_cert system:${component}=system:${component}
 
-    config_file=${CERTS_AND_CONFIGS_DIR}/${component}.kubeconfig
-    SERVER_IP='127.0.0.1'
-    if [ "${component}" == "kube-proxy" ]; then SERVER_IP=${CONTROLLER_IP}; fi
-    if [ ! -e ${config_file} ]; then
-      kubectl config set-cluster ${CLUSTER_NAME} --server=https://${SERVER_IP}:6443 \
-        --certificate-authority=${CA_PUB} \
-        --embed-certs=true --kubeconfig=${config_file}
-
-      kubectl config set-credentials system:${component} \
-        --client-certificate=${CERTS_AND_CONFIGS_DIR}/${component}.pem \
-        --client-key=${CERTS_AND_CONFIGS_DIR}/${component}-key.pem \
-        --embed-certs=true --kubeconfig=${config_file}
-
-      kubectl config set-context default --cluster=${CLUSTER_NAME} \
-        --user=system:${component} \
-        --kubeconfig=${config_file}
-
-      kubectl config use-context default --kubeconfig=${config_file}
-    else
-      echo "kubconfig for ${component} exists already"
-    fi
+    generate_config ${component}
   done
 }
 
@@ -203,7 +235,7 @@ while [[ $# -gt 0 ]]; do
         NODES="${NODES} $1"
         ;;
         *)
-        PL=' ' ; if [ "${REMAINING_ARGS}" == "" ]; then PL=''; fi
+        PL=' ' ; if [ "${REMAINING_ARGS}" = "" ]; then PL=''; fi
         REMAINING_ARGS="${REMAINING_ARGS}${PL}$key"
         ;;
     esac
@@ -239,15 +271,19 @@ case "${RARGS_ARRAY[0]}" in
   help)
     # TODO improve documentation
     echo "Usage: $0 {[WORKDIR='./work'] [generate_ca|generate_cert NAME (ADDITIONAL_CFSSL_ARGS)|for_system_components (-cip=|--controller_ip=x.x.x.x)|for_worker_nodes (-cip=|--controller_ip=x.x.x.x)]}"
+    echo "A really good introduction to certificates and the csr field meanings can be found here: https://www.youtube.com/watch?v=gXz4cq3PKdg&t=539"
+    echo "Disclaimer: It is better to grant superuser/admin access through service account authenticated by tokens, rather than through certificate authentication. For details read, e.g.: https://dev.to/danielkun/kubernetes-certificates-tokens-authentication-and-service-accounts-4fj7"
     ;;
   *)
     # TODO check for -cip/--controller-ip and exit if not specified
     # TODO check for -n/--node and exit if not specified
     generate_ca
     generate_encryption_configs encryption-config
-    generate_cert service-account
-    generate_cert kubernetes -hostname=${CERT_HOSTNAME}
-    for_system_components admin kube-controller-man kube-proxy kube-scheduler
+    generate_cert kubernetes=Kubicluster -hostname=${CERT_HOSTNAME}
+    generate_cert service-accounts=Kubicluster
+    generate_cert admin=system:masters
+    generate_config admin
+    for_system_components kube-controller-manager kube-proxy kube-scheduler
     for_worker_nodes
     ;;
 esac

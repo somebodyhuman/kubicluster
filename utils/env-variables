@@ -18,6 +18,12 @@ TEMPLATE_XML=conf/vm-template.xml
 VM_CONFIGS='vm_configs'
 VM_CONFIGS_DIR=${WORKDIR}/${VM_CONFIGS}
 
+TEMPLATE_ROOT_SSH_KEY=${IMAGES_DIR}/vm-template_rsa
+TIMEOUT_IN_SEC=10
+SSH_OPTS="-i ${TEMPLATE_ROOT_SSH_KEY} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ConnectionAttempts=1 -o ConnectTimeout=${TIMEOUT_IN_SEC}"
+SSH_CMD="ssh ${SSH_OPTS}"
+SCP_CMD="scp ${SSH_OPTS}"
+
 CERTS_AND_CONFIGS_DIR=${WORKDIR}/${CERTS_AND_CONFIGS}
 CERTS_AND_CONFIGS_MIRROR_DIR=${CERTS_AND_CONFIGS_DIR}/mirror
 

@@ -31,10 +31,7 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-TEMPLATE_ROOT_SSH_KEY=${IMAGES_DIR}/vm-template_rsa
 MAX_ATTEMPTS=18
-TIMEOUT_IN_SEC=10
-SSH_CMD="ssh -i ${TEMPLATE_ROOT_SSH_KEY} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ConnectionAttempts=1 -o ConnectTimeout=${TIMEOUT_IN_SEC}"
 
 ${DIR}/utils/workdir ensure_vm_configs_dir_exists
 

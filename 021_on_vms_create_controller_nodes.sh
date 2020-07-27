@@ -7,12 +7,6 @@ source ${DIR}/utils/env-variables
 ########################
 # Distributing the Certificate File
 
-TEMPLATE_ROOT_SSH_KEY=${IMAGES_DIR}/vm-template_rsa
-TIMEOUT_IN_SEC=10
-SSH_OPTS="-i ${TEMPLATE_ROOT_SSH_KEY} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ConnectionAttempts=1 -o ConnectTimeout=${TIMEOUT_IN_SEC}"
-SSH_CMD="ssh ${SSH_OPTS}"
-SCP_CMD="scp ${SSH_OPTS}"
-
 SCRIPTS='scripts'
 SCRIPTS_DIR="./${SCRIPTS}"
 

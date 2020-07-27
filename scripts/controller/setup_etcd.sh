@@ -37,8 +37,7 @@ while [[ $# -gt 0 ]]; do
         FORCE_UPDATE=true
         ;;
         -cmu=*|--cluster-member-uri=*)
-        shift # past the key and to the value
-        INITIAL_CLUSTER="${INITIAL_CLUSTER},$1"
+        INITIAL_CLUSTER="${INITIAL_CLUSTER},${key#*=}"
         ;;
         *)
         REMAINING_ARGS="${REMAINING_ARGS} $key"
@@ -130,6 +129,7 @@ if [ ! -f /usr/local/bin/etcdctl ]; then
   echo "installation of etcd v${ETCD_VERSION} failed. /usr/local/bin/etcdctl is missing."
   exit 1
 else
+  # TODO verify etcd version
   # verify its working correctly
   API_STARTED=$(ETCDCTL_API=3 etcdctl member list --endpoints=https://127.0.0.1:${CLIENT_PORT} \
     --cacert=${CERTS_AND_CONFIGS_DIR}/ca.pem \

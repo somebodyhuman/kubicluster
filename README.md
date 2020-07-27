@@ -92,7 +92,7 @@ CUSTOM_RSA_KEYLENGTH=2048 CUSTOM_CFSSL_VERSION=1.2 ./010_on_hypervisor_generate_
 ./011_on_hypervisor_create_vms.sh kubenode-0001=192.168.122.11 kubenode-0002=192.168.122.12
 ```
 
-### 021_on_hypervisor_create_controller_nodes.sh
+### 021_on_vms_create_controller_nodes.sh
 * creates standard directory structure
 * upload necessary certs and config files
 * install dependencies
@@ -100,8 +100,20 @@ CUSTOM_RSA_KEYLENGTH=2048 CUSTOM_CFSSL_VERSION=1.2 ./010_on_hypervisor_generate_
 
 ```bash
 # turn vms into controller nodes (format -c hostname=ip)
-./021_on_hypervisor_create_controller_nodes.sh -c kubemaster-01=192.168.122.03 -c kubemaster-0002=192.168.122.04
+./021_on_vms_create_controller_nodes.sh -c kubemaster-01=192.168.122.03 -c kubemaster-0002=192.168.122.04
 ```
+
+### 032_on_vms_create_worker_nodes.sh
+* creates standard directory structure
+* upload necessary certs and config files
+* install dependencies
+* install kubernetes tools as services
+
+```bash
+# turn vms into worker nodes (format -n hostname=ip)
+./032_on_vms_create_worker_nodes.sh -n kubenode-0001=192.168.122.11 -n kubenode-0002=192.168.122.12
+```
+
 
 ## Example workflows:
 
@@ -122,6 +134,6 @@ WORKER_0002='ikubenode-0002=192.168.122.12'
 
 ./011_on_hypervisor_create_vms.sh ${CONTROLLER} ${WORKER_0001} ${WORKER_0002}
 # turn the vms into controllers or workers
-./021_on_hypervisor_create_controller_nodes.sh -c ${CONTROLLER}
-
+./021_on_vms_create_controller_nodes.sh -c ${CONTROLLER}
+./032_on_vms_create_worker_nodes.sh -n ${WORKER_0001} -n ${WORKER_0002}
 ```

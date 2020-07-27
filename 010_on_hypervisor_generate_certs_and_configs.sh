@@ -272,7 +272,7 @@ case "${RARGS_ARRAY[0]}" in
     # TODO improve documentation
     echo "Usage: $0 {[WORKDIR='./work'] [generate_ca|generate_cert NAME (ADDITIONAL_CFSSL_ARGS)|for_system_components (-cip=|--controller_ip=x.x.x.x)|for_worker_nodes (-cip=|--controller_ip=x.x.x.x)]}"
     echo "A really good introduction to certificates and the csr field meanings can be found here: https://www.youtube.com/watch?v=gXz4cq3PKdg&t=539"
-    echo "Disclaimer: It is better to grant superuser/admin access through service account authenticated by tokens, rather than through certificate authentication. For details read, e.g.: https://dev.to/danielkun/kubernetes-certificates-tokens-authentication-and-service-accounts-4fj7"
+    echo "Disclaimer: It is better to grant superuser/admin access through a service account authenticated by tokens, rather than through certificate authentication. For details read, e.g.: https://dev.to/danielkun/kubernetes-certificates-tokens-authentication-and-service-accounts-4fj7"
     ;;
   *)
     # TODO check for -cip/--controller-ip and exit if not specified

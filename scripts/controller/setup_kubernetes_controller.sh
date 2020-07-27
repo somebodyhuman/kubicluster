@@ -46,10 +46,10 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-if [ "$(wget --help| grep 'command not found')" ]; then
+if ! which wget; then
   apt-get install -y wget
 fi
-if [ "$(tar --help| grep 'command not found')" ]; then
+if ! which tar; then
   apt-get install -y tar
 fi
 

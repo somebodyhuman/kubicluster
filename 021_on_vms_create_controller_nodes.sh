@@ -10,29 +10,28 @@ SCRIPTS_DIR="./${SCRIPTS}"
 ## on node
 NODE_WORK_DIR=/opt/kubicluster
 NODE_SCRIPTS_DIR=${NODE_WORK_DIR}/${SCRIPTS}
+NODE_CERTS_AND_CONFIGS_DIR=${NODE_WORK_DIR}/${CERTS_AND_CONFIGS}
 ETCD_DATA_DIR=${NODE_WORK_DIR}/etcd_data
 
 function update_scripts_in_nodes() {
+  # TODO only update controller scripts
   for node in ${NODES}; do
     name_ip=($(echo $node | tr "=" "\n"))
     echo "syncing scripts dir to node ${name_ip[0]}"
     ${SSH_CMD} root@${name_ip[1]} "if [ ! -d ${NODE_SCRIPTS_DIR} ]; then mkdir -p ${NODE_SCRIPTS_DIR}; fi"
     ${SSH_CMD} root@${name_ip[1]} "if [ ! -f /usr/bin/rsync ]; then apt-get install -y rsync; fi"
-    echo ${RSYNC_CMD}
     rsync -e "${SSH_CMD}" -av --no-owner --no-group ${SCRIPTS_DIR}/* root@${name_ip[1]}:${NODE_SCRIPTS_DIR}
-
   done
 }
 
 function update_certs() {
   CERTS=''
-  echo "$@"
+  echo "updating certs: $@"
   for cert in "$@"; do CERTS="${CERTS} ${CERTS_AND_CONFIGS_DIR}/${cert}.pem ${CERTS_AND_CONFIGS_DIR}/${cert}-key.pem" ; done
-  echo "$CERTS"
   for node in ${NODES}; do
     name_ip=($(echo $node | tr "=" "\n"))
-    ${SSH_CMD} root@${name_ip[1]} "if [ ! -d ${NODE_WORK_DIR}/${CERTS_AND_CONFIGS} ]; then mkdir -p ${NODE_WORK_DIR}/${CERTS_AND_CONFIGS}; fi"
-    ${SCP_CMD} ${CERTS} root@${name_ip[1]}:${NODE_WORK_DIR}/${CERTS_AND_CONFIGS}
+    ${SSH_CMD} root@${name_ip[1]} "if [ ! -d ${NODE_CERTS_AND_CONFIGS_DIR} ]; then mkdir -p ${NODE_CERTS_AND_CONFIGS_DIR}; fi"
+    ${SCP_CMD} ${CERTS} root@${name_ip[1]}:${NODE_CERTS_AND_CONFIGS_DIR}
   done
 }
 
@@ -55,7 +54,7 @@ function update_configs() {
         name_ip=($(echo $node | tr "=" "\n"))
         if [ -d ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]} ]; then rm -rf ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]}; fi
         mkdir -p ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]}
-        ${SCP_CMD} root@${name_ip[1]}:${NODE_WORK_DIR}/${CERTS_AND_CONFIGS}/${config} ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]}/${config}
+        ${SCP_CMD} root@${name_ip[1]}:${NODE_CERTS_AND_CONFIGS_DIR}/${config} ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]}/${config}
 
         if [ -e ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]}/${config} ]; then
           if ! diff ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]}/${config} ${CERTS_AND_CONFIGS_DIR}/${config}; then
@@ -88,13 +87,13 @@ function update_configs() {
 
   for node in ${NODES}; do
     name_ip=($(echo $node | tr "=" "\n"))
-    ${SSH_CMD} root@${name_ip[1]} "if [ ! -d ${NODE_WORK_DIR}/${CERTS_AND_CONFIGS} ]; then mkdir -p ${NODE_WORK_DIR}/${CERTS_AND_CONFIGS}; fi"
+    ${SSH_CMD} root@${name_ip[1]} "if [ ! -d ${NODE_CERTS_AND_CONFIGS_DIR} ]; then mkdir -p ${NODE_CERTS_AND_CONFIGS_DIR}; fi"
     if [ "${PERFORM_ETCD_DATA_RESET}" = true ]; then
       echo "INFO: performing etcd data reset on ${name_ip[0]}"
       ${SSH_CMD} root@${name_ip[1]} "if systemctl is-active etcd.service; then systemctl stop etcd.service; fi ; if [ -d ${ETCD_DATA_DIR} ]; then rm -rf ${ETCD_DATA_DIR}; fi"
     fi
     if [ "${CONFIGS}" != "" ]; then
-      ${SCP_CMD} ${CONFIGS} root@${name_ip[1]}:${NODE_WORK_DIR}/${CERTS_AND_CONFIGS}
+      ${SCP_CMD} ${CONFIGS} root@${name_ip[1]}:${NODE_CERTS_AND_CONFIGS_DIR}
     fi
   done
 }

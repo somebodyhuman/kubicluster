@@ -5,6 +5,9 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 REMAINING_ARGS=''
 NODE_WORK_DIR=''
 KUBERNETES_VERSION=1.18.5
+CLUSTER_DNS='10.32.0.10'
+CLUSTER_CIDR='10.200.0.0/16'
+FORCE_UPDATE=false
 
 while [[ $# -gt 0 ]]; do
     key="$1"
@@ -91,7 +94,7 @@ authorization:
  mode: Webhook
 clusterDomain: "cluster.local"
 clusterDNS:
- - "10.32.0.10"
+ - "${CLUSTER_DNS}"
 runtimeRequestTimeout: "15m"
 tlsCertFile: "${CERTS_AND_CONFIGS_DIR}/${HOSTNAME}.pem"
 tlsPrivateKeyFile: "${CERTS_AND_CONFIGS_DIR}/${HOSTNAME}-key.pem"
@@ -141,7 +144,7 @@ apiVersion: kubeproxy.config.k8s.io/v1alpha1
 clientConnection:
  kubeconfig: "${CERTS_AND_CONFIGS_DIR}/kube-proxy.kubeconfig"
 mode: "iptables"
-clusterCIDR: "10.200.0.0/16"
+clusterCIDR: "${CLUSTER_CIDR}"
 EOF
   fi
   if [ ! -f /etc/systemd/system/kube-proxy.service ] || \

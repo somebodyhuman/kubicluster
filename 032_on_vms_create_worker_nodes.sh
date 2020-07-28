@@ -114,6 +114,46 @@ function install_kubernetes_worker() {
   done
 }
 
+function install_cni_calico() {
+  CLIENT_PORT=2379
+  FORCE_UPDATE=false
+  while [[ $# -gt 0 ]]; do
+      key="$1"
+      echo $key
+      case "$key" in
+        -cp=*|--client-port=*)
+        CLIENT_PORT="${key#*=}"
+        ;;
+        -f|--force-update)
+        FORCE_UPDATE=true
+        ;;
+        *)
+        # do nothing
+        ;;
+      esac
+      # Shift after checking all the cases to get the next option
+      shift
+  done
+
+  PARAMS=''
+  if [ "${FORCE_UPDATE}" = true ]; then PARAMS="${PARAMS} -f"; fi
+
+
+  ETCD_CLUSTER_MEMBERS=''
+  for cmu in ${CONTROLLERS}; do
+    # if [ "${cmu}" != "${node}" ]; then
+      cmu_name_ip=($(echo $cmu | tr "=" "\n"))
+      ETCD_CLUSTER_MEMBERS="$ETCD_CLUSTER_MEMBERS -cmu=https://${cmu_name_ip[1]}:${CLIENT_PORT}"
+    # fi
+  done
+
+  for node in ${NODES}; do
+    name_ip=($(echo $node | tr "=" "\n"))
+
+    ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/worker/setup_cni_calico.sh -nwd=${NODE_WORK_DIR}${PARAMS}"
+  done
+}
+
 REMAINING_ARGS=''
 CONTROLLERS='' ; NODES=''
 CLUSTER_NAME='kubicluster'
@@ -164,6 +204,9 @@ case "${RARGS_ARRAY[0]}" in
   install_kubernetes_worker)
     install_kubernetes_worker "${RARGS_ARRAY[@]:1}"
     ;;
+  install_cni_calico)
+    install_cni_calico "${RARGS_ARRAY[@]:1}"
+    ;;
   help)
     # TODO improve documentation
     echo "Usage: $0 {[WORKDIR='./work'] [update_scripts_in_node|update_certs|update_configs|install_kata|install_containerd|install_kubernetes_worker]}"
@@ -171,10 +214,11 @@ case "${RARGS_ARRAY[0]}" in
   *)
     update_scripts_in_nodes
     # TODO check for -cip/--controller-ip and exit if not specified
-    update_certs ca
+    update_certs ca calico calico-key
     update_configs kube-proxy.kubeconfig
     install_kata
     install_containerd "${RARGS_ARRAY[@]}"
     install_kubernetes_worker "${RARGS_ARRAY[@]}"
+    install_cni_calico "${RARGS_ARRAY[@]}"
     ;;
 esac

@@ -281,6 +281,7 @@ case "${RARGS_ARRAY[0]}" in
     generate_encryption_configs encryption-config
     generate_cert kubernetes=Kubicluster -hostname=${CERT_HOSTNAME}
     generate_cert service-accounts=Kubicluster
+    generate_cert calico=Kubicluster
     generate_cert admin=system:masters
     generate_config admin
     for_system_components kube-controller-manager kube-proxy kube-scheduler

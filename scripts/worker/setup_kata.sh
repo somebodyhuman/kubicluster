@@ -21,11 +21,11 @@ fi
 
 # container runtime requirements
 # kubernets preps
-cat <<EOF | tee /etc/sysctl.d/container-runtimes.conf
-net.bridge.bridge-nf-call-ip6tables = 1
-net.bridge.bridge-nf-call-iptables = 1
-net.ipv4.ip_forward = 1
-net.ipv6.ip_forward = 1
+cat <<EOF | tee /etc/sysctl.d/991-container-runtimes.conf
+net.bridge.bridge-nf-call-ip6tables=1
+net.bridge.bridge-nf-call-iptables=1
+net.ipv4.ip_forward=1
+net.ipv6.ip_forward=1
 EOF
 
 sysctl --system

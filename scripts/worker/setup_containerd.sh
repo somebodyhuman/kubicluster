@@ -77,6 +77,14 @@ if [ ! -d ${CONTAINERD_DIR} ]; then
   tar -xzf ${NODE_WORK_DIR}/containerd-${CONTAINERD_VERSION}.tar.gz -C ${CONTAINERD_DIR}
 fi
 
+if [ ! -f /usr/local/bin/containerd ] || \
+   [ "${FORCE_UPDATE}" = true ]; then
+  for item in containerd containerd-shim containerd-shim-runc-v1 containerd-shim-runc-v2 containerd-stress ctr; do
+    if [ -f /usr/local/bin/${item} ]; then rm -f /usr/local/bin/${item} ; fi
+    ln -s ${CONTAINERD_DIR}/bin/${item} /usr/local/bin/${item}
+  done
+fi
+
 CONTAINERD_RESULT=$(containerd --version | cut -d ' ' -f 3)
 if [ "${CONTAINERD_RESULT}" != "v${CONTAINERD_VERSION}" ]; then
   echo "containerd ${CONTAINERD_VERSION} installation failed."
@@ -94,6 +102,18 @@ if [ ! -f /etc/containerd/config.toml ] || [ "${FORCE_UPDATE}" = true ]; then
     no_pivot = false
 
   [plugins.cri.containerd.runtimes]
+    [plugins.cri.containerd.runtimes.runc]
+       runtime_type = "io.containerd.runc.v1"
+       [plugins.cri.containerd.runtimes.runc.options]
+         NoPivotRoot = false
+         NoNewKeyring = false
+         ShimCgroup = ""
+         IoUid = 0
+         IoGid = 0
+         BinaryName = "runc"
+         Root = ""
+         CriuPath = ""
+         SystemdCgroup = false
     [plugins.cri.containerd.runtimes.kata]
       runtime_type = "io.containerd.kata.v2"
   [plugins.cri.containerd.default_runtime]
@@ -108,10 +128,6 @@ if [ ! -f /etc/systemd/system/containerd.service ] || \
    [ "$(systemctl status containerd.service | grep running)" = "" ] || \
    [ ! -f /usr/local/bin/containerd ] || \
    [ "${FORCE_UPDATE}" = true ]; then
-  for item in containerd containerd-shim containerd-shim-runc-v1 containerd-shim-runc-v2 containerd-stress ctr; do
-    if [ -f /usr/local/bin/${item} ]; then rm -f /usr/local/bin/${item} ; fi
-    ln -s ${CONTAINERD_DIR}/bin/${item} /usr/local/bin/${item}
-  done
   if [ ! -f /etc/systemd/system/containerd.service ] || \
      [ "${FORCE_UPDATE}" = true ]; then
     cat << EOF | tee /etc/systemd/system/containerd.service

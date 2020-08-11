@@ -143,3 +143,9 @@ else
     echo "installation of etcd v${ETCD_VERSION} successful."
   fi
 fi
+
+# TODO check performance using:
+#  etcdctl --cacert=ca.pem --cert=kubernetes.pem --key=kubernetes-key.pem del --prefix /etcdctl-check-perf/
+#  etcdctl --cacert=ca.pem --cert=kubernetes.pem --key=kubernetes-key.pem check perf --load='s' | grep FAIL != ""
+#  etcdctl --cacert=ca.pem --cert=kubernetes.pem --key=kubernetes-key.pem del --prefix /etcdctl-check-perf/
+#  etcdctl --cacert=ca.pem --cert=kubernetes.pem --key=kubernetes-key.pem check perf --load='xl' | grep FAIL != ""

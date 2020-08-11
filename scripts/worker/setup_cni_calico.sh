@@ -5,7 +5,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 REMAINING_ARGS=''
 NODE_WORK_DIR=''
 CLIENT_PORT=2379
-CALICO_VERSION=3.11.3
+CALICO_VERSION='3.11.3'
 FORCE_UPDATE=false
 
 INITIAL_ETCD_CLUSTER=''
@@ -63,13 +63,75 @@ fi
 
 chmod +x ${NODE_WORK_DIR}/calicoctl-${CALICO_VERSION}
 
-cat << EOF | tee ${CERTS_AND_CONFIGS_DIR}/calico-config.yaml
-apiVersion: projectcalico.org/v3
-kind: CalicoAPIConfig
-metadata:
-spec:
-  etcdEndpoints: ${INITIAL_ETCD_CLUSTER}
-  etcdKeyFile: ${CERTS_AND_CONFIGS_DIR}/calico-key.pem
-  etcdCertFile: ${CERTS_AND_CONFIGS_DIR}/calico.pem
-  etcdCACertFile: ${CERTS_AND_CONFIGS_DIR}/ca.pem
+cat <<EOF | tee /etc/sysctl.d/992-cni-calico.conf
+net.netfilter.nf_conntrack_max=1000000
 EOF
+sysctl --system
+
+# cat << EOF | tee ${CERTS_AND_CONFIGS_DIR}/calico-config.yaml
+# if [ ! -d /etc/calico ]; then mkdir -p /etc/calico; fi
+# cat << EOF | tee /etc/calico/calicoctl.cfg
+# apiVersion: projectcalico.org/v3
+# kind: CalicoAPIConfig
+# metadata:
+# spec:
+#   etcdEndpoints: ${INITIAL_ETCD_CLUSTER}
+#   etcdKeyFile: ${CERTS_AND_CONFIGS_DIR}/calico-cni-key.pem
+#   etcdCertFile: ${CERTS_AND_CONFIGS_DIR}/calico-cni.pem
+#   etcdCACertFile: ${CERTS_AND_CONFIGS_DIR}/ca.pem
+# EOF
+
+if [ ! -d /etc/cni/net.d ]; then mkdir -p /etc/cni/net.d; fi
+# TODO check mtu, default is "mtu": 1500,
+cat << EOF | tee /etc/cni/net.d/10-calico.conflist
+{
+  "name": "k8s-pod-network",
+  "cniVersion": "0.3.1",
+  "plugins": [
+    {
+      "type": "calico",
+      "log_level": "info",
+      "datastore_type": "kubernetes",
+      "mtu": 1440,
+      "ipam": {
+          "type": "calico-ipam"
+      },
+      "policy": {
+          "type": "k8s"
+      },
+      "kubernetes": {
+          "kubeconfig": "${CERTS_AND_CONFIGS_DIR}/calico-cni.kubeconfig"
+      }
+    },
+    {
+      "type": "portmap",
+      "snat": true,
+      "capabilities": {"portMappings": true}
+    }
+  ]
+}
+EOF
+
+if [ ! -f ${NODE_WORK_DIR}/calico-${CALICO_VERSION} ]; then
+  if ! (dpkg -s ca-certificates); then apt-get install -y ca-certificates; fi
+  wget -q --show-progress --https-only --timestamping \
+    "https://github.com/projectcalico/cni-plugin/releases/download/v${CALICO_VERSION}/calico-amd64" -O ${NODE_WORK_DIR}/calico-${CALICO_VERSION}
+  chmod 755 ${NODE_WORK_DIR}/calico-${CALICO_VERSION}
+else
+  echo "calico cni plugin ${CALICO_VERSION} already exists"
+fi
+
+if [ ! -f ${NODE_WORK_DIR}/calico-ipam-${CALICO_VERSION} ]; then
+  if ! (dpkg -s ca-certificates); then apt-get install -y ca-certificates; fi
+  wget -q --show-progress --https-only --timestamping \
+    "https://github.com/projectcalico/cni-plugin/releases/download/v${CALICO_VERSION}/calico-ipam-amd64" -O ${NODE_WORK_DIR}/calico-ipam-${CALICO_VERSION}
+    chmod 755 ${NODE_WORK_DIR}/calico-ipam-${CALICO_VERSION}
+else
+  echo "calico cni plugin ipam ${CALICO_VERSION} already exists"
+fi
+
+if [ ! -d /opt/cni/bin ]; then mkdir -p /opt/cni/bin; fi
+if [ -f /opt/cni/bin/calico ]; then rm -f /opt/cni/bin/calico; fi
+if [ -f /opt/cni/bin/calico-ipam ]; then rm -f /opt/cni/bin/calico-ipam; fi
+ln -s ${NODE_WORK_DIR}/calico-${CALICO_VERSION} /opt/cni/bin/calico
+ln -s ${NODE_WORK_DIR}/calico-ipam-${CALICO_VERSION} /opt/cni/bin/calico-ipam

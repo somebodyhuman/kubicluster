@@ -50,6 +50,51 @@ function install_kata() {
   done
 }
 
+function install_runc() {
+  RUNC_VERSION='1.0.0-rc91'
+  FORCE_UPDATE=false
+  while [[ $# -gt 0 ]]; do
+      key="$1"
+      echo $key
+      case "$key" in
+        -rv=*|--runc-version=*)
+        RUNC_VERSION="${key#*=}"
+        ;;
+        -f|--force-update)
+        FORCE_UPDATE=true
+        ;;
+        *)
+        # do nothing
+        ;;
+      esac
+      # Shift after checking all the cases to get the next option
+      shift
+  done
+
+  PARAMS=''
+  if [ "${FORCE_UPDATE}" = true ]; then PARAMS="${PARAMS} -f"; fi
+  CONTROLLER_PARAMS="${PARAMS}"
+  if [ "${RUNC_VERSION}" != "1.3.6" ]; then PARAMS="${PARAMS} -v=${RUNC_VERSION}"; fi
+
+  for node in ${NODES}; do
+    name_ip=($(echo $node | tr "=" "\n"))
+
+    ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/worker/setup_runc.sh -nwd=${NODE_WORK_DIR}${PARAMS}"
+  done
+
+  EXEC_ON_ONE_CONTROLLER=false
+  for cmu in ${CONTROLLERS}; do
+    cmu_name_ip=($(echo $cmu | tr "=" "\n"))
+    if [ "${EXEC_ON_ONE_CONTROLLER}" = false ]; then
+      # TODO force redeployment with -frd / --force-redeployment
+      # kubectl delete daemonset calico-node -n kube-system
+      # kubectl delete deployment calico-kube-controllers -n kube-system
+      ${SSH_CMD} root@${cmu_name_ip[1]} "${NODE_SCRIPTS_DIR}/controller/setup_runc.sh -nwd=${NODE_WORK_DIR} ${ETCD_CLUSTER_MEMBERS}${CONTROLLER_PARAMS}"
+      EXEC_ON_ONE_CONTROLLER=true
+    fi
+  done
+}
+
 function install_containerd() {
   CONTAINERD_VERSION='1.3.6'
   FORCE_UPDATE=false
@@ -115,14 +160,27 @@ function install_kubernetes_worker() {
 }
 
 function install_cni_calico() {
+  # TODO move all the defaults from functions and scripts into env-variable (otherwise it's annoying to maintain changes to those defaults because the will need to be changed in several places)
   CLIENT_PORT=2379
   FORCE_UPDATE=false
+  CALICO_USER='calico-cni'
+  CALICO_VERSION='3.11.3'
+  KUBERNETES_VERSION='1.18.5'
   while [[ $# -gt 0 ]]; do
       key="$1"
       echo $key
       case "$key" in
         -cp=*|--client-port=*)
         CLIENT_PORT="${key#*=}"
+        ;;
+        -u=*|--user=*)
+        CALICO_USER="${key#*=}"
+        ;;
+        -v=*|--version=*)
+        KUBERNETES_VERSION="${key#*=}"
+        ;;
+        -clv=*|--calico-version=*)
+        CALICO_VERSION="${key#*=}"
         ;;
         -f|--force-update)
         FORCE_UPDATE=true
@@ -137,20 +195,34 @@ function install_cni_calico() {
 
   PARAMS=''
   if [ "${FORCE_UPDATE}" = true ]; then PARAMS="${PARAMS} -f"; fi
+  CONTROLLER_PARAMS="${PARAMS}"
+  # if [ "${CALICO_USER}" != "calico-cni" ]; then CONTROLLER_PARAMS="${CONTROLLER_PARAMS} -u=${CALICO_USER}"; fi
+  if [ "${KUBERNETES_VERSION}" != "1.18.5" ]; then CONTROLLER_PARAMS="${CONTROLLER_PARAMS} -v=${KUBERNETES_VERSION}"; fi
 
+  if [ "${CALICO_VERSION}" != "calico-cni" ]; then PARAMS="${PARAMS} -v=${CALICO_VERSION}"; fi
 
   ETCD_CLUSTER_MEMBERS=''
   for cmu in ${CONTROLLERS}; do
-    # if [ "${cmu}" != "${node}" ]; then
-      cmu_name_ip=($(echo $cmu | tr "=" "\n"))
-      ETCD_CLUSTER_MEMBERS="$ETCD_CLUSTER_MEMBERS -cmu=https://${cmu_name_ip[1]}:${CLIENT_PORT}"
-    # fi
+    cmu_name_ip=($(echo $cmu | tr "=" "\n"))
+    ETCD_CLUSTER_MEMBERS="$ETCD_CLUSTER_MEMBERS -cmu=https://${cmu_name_ip[1]}:${CLIENT_PORT}"
   done
 
   for node in ${NODES}; do
     name_ip=($(echo $node | tr "=" "\n"))
 
     ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/worker/setup_cni_calico.sh -nwd=${NODE_WORK_DIR}${PARAMS}"
+  done
+
+  EXEC_ON_ONE_CONTROLLER=false
+  for cmu in ${CONTROLLERS}; do
+    cmu_name_ip=($(echo $cmu | tr "=" "\n"))
+    if [ "${EXEC_ON_ONE_CONTROLLER}" = false ]; then
+      # TODO force redeployment with -frd / --force-redeployment
+      # kubectl delete daemonset calico-node -n kube-system
+      # kubectl delete deployment calico-kube-controllers -n kube-system
+      ${SSH_CMD} root@${cmu_name_ip[1]} "${NODE_SCRIPTS_DIR}/controller/setup_cni_calico_typha.sh -nwd=${NODE_WORK_DIR} ${ETCD_CLUSTER_MEMBERS}${CONTROLLER_PARAMS}"
+      EXEC_ON_ONE_CONTROLLER=true
+    fi
   done
 }
 
@@ -198,6 +270,9 @@ case "${RARGS_ARRAY[0]}" in
   install_kata)
     install_kata
     ;;
+  install_runc)
+    install_runc "${RARGS_ARRAY[@]:1}"
+    ;;
   install_containerd)
     install_containerd "${RARGS_ARRAY[@]:1}"
     ;;
@@ -214,9 +289,10 @@ case "${RARGS_ARRAY[0]}" in
   *)
     update_scripts_in_nodes
     # TODO check for -cip/--controller-ip and exit if not specified
-    update_certs ca calico calico-key
-    update_configs kube-proxy.kubeconfig
+    update_certs ca calico-cni calico-cni-key
+    update_configs kube-proxy.kubeconfig calico-cni.kubeconfig
     install_kata
+    install_runc "${RARGS_ARRAY[@]}"
     install_containerd "${RARGS_ARRAY[@]}"
     install_kubernetes_worker "${RARGS_ARRAY[@]}"
     install_cni_calico "${RARGS_ARRAY[@]}"

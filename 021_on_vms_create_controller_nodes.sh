@@ -242,7 +242,7 @@ case "${RARGS_ARRAY[0]}" in
   *)
     update_scripts_in_nodes
     # TODO check for -cip/--controller-ip and exit if not specified
-    update_certs ca kubernetes service-accounts
+    update_certs ca kubernetes service-accounts calico-cni
     update_configs admin.kubeconfig kube-controller-manager.kubeconfig kube-scheduler.kubeconfig encryption-config.yaml
     install_etcd "${RARGS_ARRAY[@]}"
     install_kubernetes_controller "${RARGS_ARRAY[@]}"

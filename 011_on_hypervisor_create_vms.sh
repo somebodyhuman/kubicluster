@@ -74,12 +74,22 @@ for vm in ${REMAINING_ARGS}; do
     attempts=0
     vm_result=124
     while [[ ${attempts} -lt ${MAX_ATTEMPTS} ]]; do
-      ${SSH_CMD} root@${TEMPLATE_IP} "echo ${vm_name_ip[0]} >/etc/hostname"
-      if [[ $? -eq 0 ]]; then
+      # TODO make this resumable i.e. try to connect to both template ip and target ip
+      ssh_out=$(${SSH_CMD} root@${TEMPLATE_IP} "echo ${vm_name_ip[0]} >/etc/hostname")
+      result=$?
+      if [[ ${result} -eq 0 ]]; then
         vm_result=64
         break
       fi
-      echo "setting hostname of ${vm_name_ip[0]} via SSH command not successful ... waiting ${TIMEOUT_IN_SEC} seconds, before retry"
+      refused=$(echo ${ssh_out} | grep "Connection refused")
+      echo ${ssh_out}
+      echo ${ssh_out} | grep "Connection refused"
+      if [ "${refused}" != "" ]; then
+        echo "connection refused, waiting ${TIMEOUT_IN_SEC} seconds before retry"
+        sleep ${TIMEOUT_IN_SEC}
+      else
+        echo "setting hostname of ${vm_name_ip[0]} via SSH command not successful ... waiting ${TIMEOUT_IN_SEC} seconds, before retry"
+      fi
       attempts=$((${attempts}+1))
       # sleep ${TIMEOUT_IN_SEC}
     done
@@ -87,17 +97,24 @@ for vm in ${REMAINING_ARGS}; do
 
     IP_RESULT=$(${SSH_CMD} root@${TEMPLATE_IP} "sed -i 's/${TEMPLATE_IP}/${vm_name_ip[1]}/g' /etc/network/interfaces")
     if [ "$(echo ${IP_RESULT})" != "" ]; then echo "problem while configuring ip address for ${vm_name_ip[0]}." ; exit ${vm_result} ; fi
-
     ${SSH_CMD} root@${TEMPLATE_IP} "reboot -h now"
+
     attempts=0
     while [[ ${attempts} -lt ${MAX_ATTEMPTS} ]]; do
-      ${SSH_CMD} root@${vm_name_ip[1]} "hostname"
-      if [[ $? -eq 0 ]]; then
+      ssh_out=$(${SSH_CMD} root@${vm_name_ip[1]} "hostname")
+      result=$?
+      if [[ ${result} -eq 0 ]]; then
         echo "hostname set to ${vm_name_ip[0]} and ip set to ${vm_name_ip[1]}"
         vm_result=0
         break
       fi
-      echo "configuration confirmation for ${vm_name_ip[0]} not successful ... waiting ${TIMEOUT_IN_SEC} seconds, before retry"
+      refused=$(echo ${ssh_out} | grep "Connection refused")
+      if [ "${refused}" != "" ]; then
+        echo "connection refused, waiting ${TIMEOUT_IN_SEC} seconds before retry"
+        sleep ${TIMEOUT_IN_SEC}
+      else
+        echo "configuration confirmation for ${vm_name_ip[0]} not successful ... waiting ${TIMEOUT_IN_SEC} seconds, before retry"
+      fi
       attempts=$((${attempts}+1))
       # sleep ${TIMEOUT_IN_SEC}
     done

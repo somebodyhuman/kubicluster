@@ -139,7 +139,7 @@ function generate_config() {
 
   config_file=${CERTS_AND_CONFIGS_DIR}/${NAME}.kubeconfig
   SERVER_IP='127.0.0.1'
-  if [ "${NAME}" = "kube-proxy" ]; then SERVER_IP=${CONTROLLER_IP}; fi
+  if [ "${NAME}" = "kube-proxy" ] || [ "${NAME}" = "calico-cni" ] ; then SERVER_IP=${CONTROLLER_IP}; fi
   if [ ! -e ${config_file} ]; then
     echo "generating config for ${NAME} into ${NAME}.kubeconfig"
     kubectl config set-cluster ${CLUSTER_NAME} --server=https://${SERVER_IP}:6443 \
@@ -245,7 +245,7 @@ done
 
 # TODO support cluster of controllers and take first -cip as master controller
 CERT_HOSTNAME="${CONTROLLER_IP},${CONTROLLER_HOSTNAME}"
-CERT_HOSTNAME="${CERT_HOSTNAME},127.0.0.1,localhost,kubernetes.default"
+CERT_HOSTNAME="${CERT_HOSTNAME},127.0.0.1,localhost,10.32.0.1,kubernetes.default"
 
 RARGS_ARRAY=($(echo $REMAINING_ARGS | tr " " "\n"))
 echo "running: ${RARGS_ARRAY[0]}"
@@ -281,9 +281,9 @@ case "${RARGS_ARRAY[0]}" in
     generate_encryption_configs encryption-config
     generate_cert kubernetes=Kubicluster -hostname=${CERT_HOSTNAME}
     generate_cert service-accounts=Kubicluster
-    generate_cert calico=Kubicluster
+    generate_cert calico-cni=Kubicluster
     generate_cert admin=system:masters
-    generate_config admin
+    generate_config calico-cni admin
     for_system_components kube-controller-manager kube-proxy kube-scheduler
     for_worker_nodes
     ;;

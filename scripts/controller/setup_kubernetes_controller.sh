@@ -7,7 +7,7 @@ NODE_WORK_DIR=''
 INTERNAL_IP=''
 CLUSTER_NAME='kubicluster'
 CLIENT_PORT=2379
-KUBERNETES_VERSION=1.18.5
+KUBERNETES_VERSION='1.18.5'
 FORCE_UPDATE=false
 # TODO let the following be overwritten through args
 CLUSTER_IP_RANGE='10.32.0.0/24'
@@ -60,6 +60,8 @@ CERTS_AND_CONFIGS_DIR=${NODE_WORK_DIR}/certs_and_configs
 KUBERNETES_PARENT_DIR=${NODE_WORK_DIR}/kubernetes-${KUBERNETES_VERSION}
 KUBERNETES_DIR=${KUBERNETES_PARENT_DIR}/kubernetes
 KUBERNETES_SERVER_DIR=${KUBERNETES_DIR}/server
+
+KUBECTL_CMD=${KUBERNETES_SERVER_DIR}/bin/kubectl
 
 if [ ! -d ${NODE_WORK_DIR} ]; then mkdir -p ${NODE_WORK_DIR}; fi
 
@@ -126,19 +128,18 @@ ExecStart=/usr/local/bin/kube-apiserver \\
   --bind-address=0.0.0.0 \\
   --client-ca-file=${CERTS_AND_CONFIGS_DIR}/ca.pem \\
   --enable-admission-plugins=NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \\
-  --enable-swagger-ui=true \\
   --etcd-cafile=${CERTS_AND_CONFIGS_DIR}/ca.pem \\
   --etcd-certfile=${CERTS_AND_CONFIGS_DIR}/kubernetes.pem \\
   --etcd-keyfile=${CERTS_AND_CONFIGS_DIR}/kubernetes-key.pem \\
   --etcd-servers=${INITIAL_ETCD_CLUSTER} \\
   --event-ttl=1h \\
-  --experimental-encryption-provider-config=${CERTS_AND_CONFIGS_DIR}/encryption-config.yaml \\
+  --encryption-provider-config=${CERTS_AND_CONFIGS_DIR}/encryption-config.yaml \\
   --kubelet-certificate-authority=${CERTS_AND_CONFIGS_DIR}/ca.pem \\
   --kubelet-client-certificate=${CERTS_AND_CONFIGS_DIR}/kubernetes.pem \\
   --kubelet-client-key=${CERTS_AND_CONFIGS_DIR}/kubernetes-key.pem \\
   --kubelet-https=true \\
   --runtime-config=api/all=true \\
-  --service-account-key-file=${CERTS_AND_CONFIGS_DIR}/service-account.pem \\
+  --service-account-key-file=${CERTS_AND_CONFIGS_DIR}/service-accounts.pem \\
   --service-cluster-ip-range=${CLUSTER_IP_RANGE} \\
   --service-node-port-range=${SERVICE_NODE_PORT_RANGE} \\
   --tls-cert-file=${CERTS_AND_CONFIGS_DIR}/kubernetes.pem \\
@@ -183,7 +184,7 @@ ExecStart=/usr/local/bin/kube-controller-manager \\
   --kubeconfig=${CERTS_AND_CONFIGS_DIR}/kube-controller-manager.kubeconfig \\
   --leader-elect=true \\
   --root-ca-file=${CERTS_AND_CONFIGS_DIR}/ca.pem \\
-  --service-account-private-key-file=${CERTS_AND_CONFIGS_DIR}/service-account-key.pem \\
+  --service-account-private-key-file=${CERTS_AND_CONFIGS_DIR}/service-accounts-key.pem \\
   --service-cluster-ip-range=${CLUSTER_IP_RANGE} \\
   --use-service-account-credentials=true \\
   --v=2
@@ -263,5 +264,45 @@ else
       EXIT_CODE=$((${EXIT_CODE} + 1))
     fi
   done
-  echo ${EXIT_CODE}
 fi
+
+cat << EOF | ${KUBECTL_CMD} apply -f -
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+  name: system:kube-apiserver-to-kubelet
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - nodes/proxy
+      - nodes/stats
+      - nodes/log
+      - nodes/spec
+      - nodes/metrics
+    verbs:
+      - "*"
+EOF
+
+# role binding
+cat << EOF | ${KUBECTL_CMD} apply -f -
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: system:kube-apiserver
+  namespace: ""
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:kube-apiserver-to-kubelet
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: kubernetes
+EOF
+
+kubectl create clusterrolebinding apiserver-kubelet-api-admin --clusterrole system:kubelet-api-admin --user kubernetes

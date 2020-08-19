@@ -2,13 +2,10 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
+source ${DIR}/../utils/env-variables
+
 REMAINING_ARGS=''
-NODE_WORK_DIR=''
-KUBERNETES_VERSION='1.18.5'
-FORCE_UPDATE=false
 # CALICO_USER='calico-cni'
-CALICO_VERSION='3.11.3'
-CLUSTER_CIDR='10.200.0.0/16'
 INITIAL_ETCD_CLUSTER=''
 
 while [[ $# -gt 0 ]]; do

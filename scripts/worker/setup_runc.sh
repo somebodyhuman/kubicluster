@@ -2,29 +2,28 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-REMAINING_ARGS=''
-NODE_WORK_DIR=''
-RUNC_VERSION='1.0.0-rc91'
-FORCE_UPDATE=false
-while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-      -nwd=*|--node-work-dir=*)
-        NODE_WORK_DIR="${key#*=}"
-        ;;
-      -v=*|--version=*)
-        RUNC_VERSION="${key#*=}"
-        ;;
-      -f|--force-update)
-        FORCE_UPDATE=true
-        ;;
-      *)
-        REMAINING_ARGS="${REMAINING_ARGS} $key"
-        ;;
-    esac
-    # Shift after checking all the cases to get the next option
-    shift
-done
+source ${DIR}/../utils/env-variables "$@"
+
+# REMAINING_ARGS=''
+# while [[ $# -gt 0 ]]; do
+#     key="$1"
+#     case "$key" in
+#       -nwd=*|--node-work-dir=*)
+#         NODE_WORK_DIR="${key#*=}"
+#         ;;
+#       -v=*|--version=*)
+#         RUNC_VERSION="${key#*=}"
+#         ;;
+#       -f|--force-update)
+#         FORCE_UPDATE=true
+#         ;;
+#       *)
+#         REMAINING_ARGS="${REMAINING_ARGS} $key"
+#         ;;
+#     esac
+#     # Shift after checking all the cases to get the next option
+#     shift
+# done
 
 if ! which curl; then
   apt-get install -y wget

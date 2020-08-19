@@ -2,50 +2,26 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-REMAINING_ARGS=''
-NODE_WORK_DIR=''
-INTERNAL_IP=''
-CLUSTER_TOKEN=etcd-kubicluster
-CLIENT_PORT=2379
-PEER_PORT=2380
-ETCD_VERSION='3.4.10'
+source ${DIR}/../utils/env-variables "$@"
+
 INITIAL_CLUSTER=''
-FORCE_UPDATE=false
-# As long as there is at least one more argument, keep looping
-while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-        -nwd=*|--node-work-dir=*)
-        NODE_WORK_DIR="${key#*=}"
-        ;;
-        -ip=*|--internal-ip=*)
-        INTERNAL_IP="${key#*=}"
-        ;;
-        -cp=*|--client-port=*)
-        CLIENT_PORT="${key#*=}"
-        ;;
-        -pp=*|--peer-port=*)
-        PEER_PORT="${key#*=}"
-        ;;
-        -t=*|--cluster-token=*)
-        CLUSTER_TOKEN="${key#*=}"
-        ;;
-        -ev=*|--etcd-version=*)
-        ETCD_VERSION="${key#*=}"
-        ;;
-        -f|--force-update)
-        FORCE_UPDATE=true
-        ;;
-        -cmu=*|--cluster-member-uri=*)
-        INITIAL_CLUSTER="${INITIAL_CLUSTER},${key#*=}"
-        ;;
-        *)
-        REMAINING_ARGS="${REMAINING_ARGS} $key"
-        ;;
-    esac
-    # Shift after checking all the cases to get the next option
-    shift
+INTERNAL_IP=''
+IGNORED_ARGS=''
+for key in ${REMARGS_ARRAY[@]} ; do
+  case "$key" in
+    -ip=*|--internal-ip=*)
+    INTERNAL_IP="${key#*=}"
+    ;;
+    -cmu=*|--cluster-member-uri=*)
+    cmu_name_ip=($(echo "${key#*=}" | tr "," "\n"))
+    INITIAL_CLUSTER="${INITIAL_CLUSTER},${cmu_name_ip[0]}=https://${cmu_name_ip[1]}:${ETCD_PEER_PORT}"
+    ;;
+    *)
+    IGNORED_ARGS="${IGNORED_ARGS} $key"
+    ;;
+  esac
 done
+if [ "${DEBUG}" = true ]; then echo "[DEBUG]: ignored args: ${IGNORED_ARGS}" ; fi
 
 # TODO check for essential args and exit if not specified
 
@@ -60,7 +36,7 @@ CERTS_AND_CONFIGS_DIR=${NODE_WORK_DIR}/certs_and_configs
 ETCD_DATA_DIR=${NODE_WORK_DIR}/etcd_data
 
 # add this controller to the initial cluster list
-INITIAL_CLUSTER="$(hostname)=https://${INTERNAL_IP}:${PEER_PORT}${INITIAL_CLUSTER}"
+INITIAL_CLUSTER="$(hostname)=https://${INTERNAL_IP}:${ETCD_PEER_PORT}${INITIAL_CLUSTER}"
 
 if [ ! -d /etc/etcd ]; then mkdir -p /etc/etcd; fi
 if [ ! -d /var/lib/etcd ]; then mkdir -p /var/lib/etcd; fi
@@ -102,11 +78,11 @@ ExecStart=/usr/local/bin/etcd \\
   --peer-trusted-ca-file=${CERTS_AND_CONFIGS_DIR}/ca.pem \\
   --peer-client-cert-auth \\
   --client-cert-auth \\
-  --initial-advertise-peer-urls https://${INTERNAL_IP}:${PEER_PORT} \\
-  --listen-peer-urls https://${INTERNAL_IP}:${PEER_PORT} \\
-  --listen-client-urls https://${INTERNAL_IP}:${CLIENT_PORT},https://127.0.0.1:${CLIENT_PORT} \\
-  --advertise-client-urls https://${INTERNAL_IP}:${CLIENT_PORT} \\
-  --initial-cluster-token ${CLUSTER_TOKEN} \\
+  --initial-advertise-peer-urls https://${INTERNAL_IP}:${ETCD_PEER_PORT} \\
+  --listen-peer-urls https://${INTERNAL_IP}:${ETCD_PEER_PORT} \\
+  --listen-client-urls https://${INTERNAL_IP}:${ETCD_CLIENT_PORT},https://127.0.0.1:${ETCD_CLIENT_PORT} \\
+  --advertise-client-urls https://${INTERNAL_IP}:${ETCD_CLIENT_PORT} \\
+  --initial-cluster-token ${ETCD_CLUSTER_TOKEN} \\
   --initial-cluster ${INITIAL_CLUSTER} \\
   --initial-cluster-state new \\
   --data-dir=${ETCD_DATA_DIR}
@@ -131,7 +107,7 @@ if [ ! -f /usr/local/bin/etcdctl ]; then
 else
   # TODO verify etcd version
   # verify its working correctly
-  API_STARTED=$(ETCDCTL_API=3 etcdctl member list --endpoints=https://127.0.0.1:${CLIENT_PORT} \
+  API_STARTED=$(ETCDCTL_API=3 etcdctl member list --endpoints=https://127.0.0.1:${ETCD_CLIENT_PORT} \
     --cacert=${CERTS_AND_CONFIGS_DIR}/ca.pem \
     --cert=${CERTS_AND_CONFIGS_DIR}/kubernetes.pem \
     --key=${CERTS_AND_CONFIGS_DIR}/kubernetes-key.pem \

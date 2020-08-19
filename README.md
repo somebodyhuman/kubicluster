@@ -114,6 +114,13 @@ CUSTOM_RSA_KEYLENGTH=2048 CUSTOM_CFSSL_VERSION=1.2 ./010_on_hypervisor_generate_
 ./032_on_vms_create_worker_nodes.sh -n kubenode-0001=192.168.122.11 -n kubenode-0002=192.168.122.12
 ```
 
+# TODO turn this into into a separate 040_setup_networking.sh
+In case, you run into networking issues, that you cannot solve and would like to start from scratch, you can delete the kubernetes resources that got generated
+by applying the automatically customized calico.yaml in 032_on_vms_create_worker_nodes:
+```bash
+kubectl delete daemonset calico-node -n kube-system
+kubectl delete deployment calico-kube-controllers -n kube-system
+```
 
 ## Example workflows:
 

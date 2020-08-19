@@ -2,52 +2,27 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-REMAINING_ARGS=''
-NODE_WORK_DIR=''
-INTERNAL_IP=''
-CLUSTER_NAME='kubicluster'
-CLIENT_PORT=2379
-KUBERNETES_VERSION='1.18.5'
-FORCE_UPDATE=false
-# TODO let the following be overwritten through args
-CLUSTER_IP_RANGE='10.32.0.0/24'
-SERVICE_NODE_PORT_RANGE='30000-32767'
-CLUSTER_CIDR='10.200.0.0/16'
+source ${DIR}/../utils/env-variables "$@"
 
+INTERNAL_IP=''
 INITIAL_ETCD_CLUSTER=''
-# As long as there is at least one more argument, keep looping
-while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-        -nwd=*|--node-work-dir=*)
-        NODE_WORK_DIR="${key#*=}"
-        ;;
+IGNORED_ARGS=''
+for key in ${REMARGS_ARRAY[@]} ; do
+  case "$key" in
         -ip=*|--internal-ip=*)
         INTERNAL_IP="${key#*=}"
         ;;
-        -cl=*|--cluster=*)
-        CLUSTER_NAME="${key#*=}"
-        ;;
-        -cp=*|--client-port=*)
-        CLIENT_PORT="${key#*=}"
-        ;;
-        -v=*|--version=*)
-        KUBERNETES_VERSION="${key#*=}"
-        ;;
-        -f|--force-update)
-        FORCE_UPDATE=true
-        ;;
         -cmu=*|--cluster-member-uri=*)
+        cmu_name_ip=($(echo "${key#*=}" | tr "," "\n"))
         PL=',' ; if [ "${INITIAL_ETCD_CLUSTER}" = "" ]; then PL=''; fi
-        INITIAL_ETCD_CLUSTER="${INITIAL_ETCD_CLUSTER}${PL}${key#*=}"
+        INITIAL_ETCD_CLUSTER="${INITIAL_ETCD_CLUSTER}${PL}https://${cmu_name_ip[1]}:${ETCD_CLIENT_PORT}"
         ;;
         *)
-        REMAINING_ARGS="${REMAINING_ARGS} $key"
+        IGNORED_ARGS="${IGNORED_ARGS} $key"
         ;;
     esac
-    # Shift after checking all the cases to get the next option
-    shift
 done
+if [ "${DEBUG}" = true ]; then echo "[DEBUG]: ignored args: ${IGNORED_ARGS}" ; fi
 
 if ! which wget; then
   apt-get install -y wget

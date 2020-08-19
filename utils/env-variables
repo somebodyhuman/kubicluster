@@ -1,62 +1,71 @@
 #!/bin/bash
-
+# This file contains all variables used by the scripts.
+# Any variable can be overwritten by setting it as an environment variable.
+# Some can also be overwritten by adding arguments to commands relying on those variables
 THIS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-WORKDIR=${CUSTOM_WORKDIR}
-if [ "${WORKDIR}" == "" ]; then
+
+## overwrite any (configurable) variable by sourcing ${WORKDIR}/custom-env-variables
+if [ -f ${WORKDIR}/custom-env-variables ]; then source ${WORKDIR}/custom-env-variables ; fi
+
+if [ "${WORKDIR}" = "" ]; then
   # defaults to ./work inside this repository
   WORKDIR=$(realpath ${THIS_DIR}/../work)
 fi
 
-IMAGES='images'
-CERTS_AND_CONFIGS='certs_and_configs'
-TOOLS='tools'
-SCRIPTS='scripts'
-SCRIPTS_DIR="./${SCRIPTS}"
+## tool versions used across the cluster on hypervisor)
+if [ "${CFSSL_VERSION}" = "" ];       then CFSSL_VERSION='1.2' ; fi
+if [ "${KUBERNETES_VERSION}" = "" ];  then KUBERNETES_VERSION='1.18.5' ; fi
+# note the kubernetes version is sourced from the env-variables scripts that any node script is using
+# TODO remove the duplicate either here or in scripts/utils/env-variables
 
-## on node
-NODE_WORK_DIR=/opt/kubicluster
-NODE_SCRIPTS_DIR=${NODE_WORK_DIR}/${SCRIPTS}
-NODE_CERTS_AND_CONFIGS_DIR=${NODE_WORK_DIR}/${CERTS_AND_CONFIGS}
-## on controller nodes
-ETCD_DATA_DIR=${NODE_WORK_DIR}/etcd_data
+## path to scripts dir that will be synced to nodes
+if [ "${SCRIPTS_DIR}" = "" ];       then SCRIPTS_DIR=$(realpath ${THIS_DIR}/../scripts) ; fi
 
-IMAGES_DIR=${WORKDIR}/${IMAGES}
-TEMPLATE_IP_FILE=${WORKDIR}/${IMAGES}/vm-template-ip.txt
-TEMPLATE_XML=conf/vm-template.xml
-VM_CONFIGS='vm_configs'
-VM_CONFIGS_DIR=${WORKDIR}/${VM_CONFIGS}
+source ${SCRIPTS_DIR}/utils/env-strings
 
-TEMPLATE_ROOT_SSH_KEY=${IMAGES_DIR}/vm-template_rsa
-TIMEOUT_IN_SEC=10
-SSH_OPTS="-i ${TEMPLATE_ROOT_SSH_KEY} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ConnectionAttempts=1 -o ConnectTimeout=${TIMEOUT_IN_SEC}"
-SSH_CMD="ssh ${SSH_OPTS}"
-SCP_CMD="scp ${SSH_OPTS}"
+## on hypervisor: paths to files and directories used in virtual machine management commands
+if [ "${IMAGES_DIR}" = "" ];            then IMAGES_DIR=${WORKDIR}/${IMAGES} ; fi
+if [ "${TEMPLATE_IP}" = "" ];           then TEMPLATE_IP='192.168.122.254' ; fi
+if [ "${TEMPLATE_XML}" = "" ];          then TEMPLATE_XML=conf/vm-template.xml ; fi
+if [ "${VM_CONFIGS_DIR}" = "" ];        then VM_CONFIGS_DIR=${WORKDIR}/${VM_CONFIGS} ; fi
+if [ "${TEMPLATE_ROOT_SSH_KEY}" = "" ]; then TEMPLATE_ROOT_SSH_KEY=${IMAGES_DIR}/vm-template_rsa ; fi
 
-CERTS_AND_CONFIGS_DIR=${WORKDIR}/${CERTS_AND_CONFIGS}
-CERTS_AND_CONFIGS_MIRROR_DIR=${CERTS_AND_CONFIGS_DIR}/mirror
+## on hyppervisor: path to files and directories used in kubernetes management commands
+if [ "${TOOLS_DIR}" = "" ];                    then TOOLS_DIR=${WORKDIR}/${TOOLS} ; fi
+if [ "${KUBERNETES_ON_HYPERVISOR_DIR}" = "" ]; then KUBERNETES_ON_HYPERVISOR_DIR=${TOOLS_DIR}/kubernetes-${KUBERNETES_VERSION} ; fi
+## on hypervisor: path to kubectl, cannot be overwritten, is always installed into this place relative to kubernetes on the hypervisor
+KUBECTL_CMD_ON_HYPERVISOR=${KUBERNETES_ON_HYPERVISOR_DIR}/kubernetes/client/bin/kubectl
 
-# key length
-RSA_KEYLENGTH=${CUSTOM_RSA_KEYLENGTH}
-if [ "${RSA_KEYLENGTH}" == "" ]; then RSA_KEYLENGTH=8192 ; fi
-
+## on hypervisor: variables and path to files used in certificate management commands
+if [ "${RSA_KEYLENGTH}" = "" ];                then RSA_KEYLENGTH=8192 ; fi
+if [ "${CERTS_AND_CONFIGS_DIR}" = "" ];         then CERTS_AND_CONFIGS_DIR=${WORKDIR}/${CERTS_AND_CONFIGS} ; fi
+if [ "${CERTS_AND_CONFIGS_MIRROR_DIR}" = "" ];  then CERTS_AND_CONFIGS_MIRROR_DIR=${CERTS_AND_CONFIGS_DIR}/mirror ; fi
 ## default cert names
-CA_CONFIG=${CERTS_AND_CONFIGS_DIR}/ca-config.json
-CA_CSR=${CERTS_AND_CONFIGS_DIR}/ca-csr.json
-CA_BARE=${CERTS_AND_CONFIGS_DIR}/ca
-CA_PUB=${CERTS_AND_CONFIGS_DIR}/ca.pem
-CA_KEY=${CERTS_AND_CONFIGS_DIR}/ca-key.pem
-
-TOOLS_DIR=${WORKDIR}/${TOOLS}
-
-## default TOOL versions and cmd paths
-CFSSL_VERSION=${CUSTOM_CFSSL_VERSION}
-if [ "${CFSSL_VERSION}" == "" ]; then CFSSL_VERSION='1.2' ; fi
+if [ "${CA_CONFIG}" = "" ]; then CA_CONFIG=${CERTS_AND_CONFIGS_DIR}/ca-config.json ; fi
+if [ "${CA_CSR}" = "" ];    then CA_CSR=${CERTS_AND_CONFIGS_DIR}/ca-csr.json ; fi
+if [ "${CA_BARE}" = "" ];   then CA_BARE=${CERTS_AND_CONFIGS_DIR}/ca ; fi
+if [ "${CA_PUB}" = "" ];    then CA_PUB=${CERTS_AND_CONFIGS_DIR}/ca.pem ; fi
+if [ "${CA_KEY}" = "" ];    then CA_KEY=${CERTS_AND_CONFIGS_DIR}/ca-key.pem ; fi
+## paths to cfssl cmds, cannot be overwritten, is always installed into this place relative to tools dir on the hypervisor
 CFSSL_CMD=${TOOLS_DIR}/cfssl-${CFSSL_VERSION}
 CFSSLJSON_CMD=${TOOLS_DIR}/cfssljson-${CFSSL_VERSION}
 CFSSLCERTINFO_CMD=${TOOLS_DIR}/cfssl-certinfo-${CFSSL_VERSION}
+## RBAC variables
+RBAC_CLUSTER_NAME='Kubicluster'
 
-KUBERNETES_VERSION=${CUSTOM_KUBERNETES_VERSION}
-if [ "${KUBERNETES_VERSION}" == "" ]; then KUBERNETES_VERSION='1.18.5' ; fi
-KUBERNETES_ON_HYPERVISOR_DIR=${TOOLS_DIR}/kubernetes-${KUBERNETES_VERSION}
-KUBECTL_CMD_ON_HYPERVISOR=${KUBERNETES_ON_HYPERVISOR_DIR}/kubernetes/client/bin/kubectl
+## on hypervisor: ssh config used to connect to nodes
+if [ "${SSH_TIMEOUT_IN_SEC}" = "" ];      then SSH_TIMEOUT_IN_SEC=10 ; fi
+## on hypervisor: ssh commands cannot be overwritten, but are used in several places, therefore defined in here
+SSH_OPTS="-i ${TEMPLATE_ROOT_SSH_KEY} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ConnectionAttempts=1 -o ConnectTimeout=${SSH_TIMEOUT_IN_SEC}"
+SSH_CMD="ssh ${SSH_OPTS}"
+SCP_CMD="scp ${SSH_OPTS}"
+
+# default values for optional args
+if [ "${VIRT_STORAGE_DIR}" = "" ];  then VIRT_STORAGE_DIR=/var/lib/libvirt/images ; fi
+if [ "${VCPUS}" = "" ];             then VCPUS=1 ; fi
+if [ "${VMEM}" = "" ];              then VMEM=4194304 ; fi
+if [ "${QEMU_TYPE}" = "" ];         then QEMU_TYPE='qcow2' ; fi
+
+# source all node variables including tool versions used for the cluster
+source ${SCRIPTS_DIR}/utils/env-variables "$@"

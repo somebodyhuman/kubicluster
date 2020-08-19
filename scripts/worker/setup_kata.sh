@@ -2,18 +2,7 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-KATA_VERSION='1.11.2'
-
-while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-        -v=*|--version=*)
-        KATA_VERSION="${key#*=}"
-        ;;
-    esac
-    # Shift after checking all the cases to get the next option
-    shift
-done
+source ${DIR}/../utils/env-variables "$@"
 
 if ! which curl; then
   apt-get install -y curl

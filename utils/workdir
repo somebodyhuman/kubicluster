@@ -2,14 +2,15 @@
 
 THIS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-source ${THIS_DIR}/env-variables
-
 function ensure_exists() {
   echo "ensure directory $1 exists"
   if [ ! -d ${1} ]; then
     mkdir -p ${1}
   fi
 }
+
+# this script is always called indirectly via `source path/to/utils/workdir`
+# it can be called directly though, but then the variables must be provided either by calling utils/env-variables before or by setting them manually
 
 case "$1" in
   ensure_exists)
@@ -31,5 +32,6 @@ case "$1" in
     ensure_exists ${VM_CONFIGS_DIR}
     ;;
   *)
-    echo "Usage: $0 {WORKDIR='./work' ensure_exists|ensure_images_dir_exists|ensure_certs_and_configs_dir_exists|ensure_tools_dir_exists}"
+    echo "Usage: [WORKDIR=./work] $0 {ensure_exists|ensure_images_dir_exists|ensure_certs_and_configs_dir_exists|ensure_tools_dir_exists}"
+    ;;
 esac

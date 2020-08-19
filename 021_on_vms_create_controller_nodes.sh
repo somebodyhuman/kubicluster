@@ -2,12 +2,10 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-source ${DIR}/utils/env-variables
-
 function update_scripts_in_nodes() {
   # TODO only update controller scripts
-  for node in ${NODES}; do
-    name_ip=($(echo $node | tr "=" "\n"))
+  for node in ${CONTROLLERS}; do
+    name_ip=($(echo $node | tr "," "\n"))
     echo "syncing scripts dir to node ${name_ip[0]}"
     ${SSH_CMD} root@${name_ip[1]} "if [ ! -d ${NODE_SCRIPTS_DIR} ]; then mkdir -p ${NODE_SCRIPTS_DIR}; fi"
     ${SSH_CMD} root@${name_ip[1]} "if [ ! -f /usr/bin/rsync ]; then apt-get install -y rsync; fi"
@@ -19,8 +17,8 @@ function update_certs() {
   CERTS=''
   echo "updating certs: $@"
   for cert in "$@"; do CERTS="${CERTS} ${CERTS_AND_CONFIGS_DIR}/${cert}.pem ${CERTS_AND_CONFIGS_DIR}/${cert}-key.pem" ; done
-  for node in ${NODES}; do
-    name_ip=($(echo $node | tr "=" "\n"))
+  for node in ${CONTROLLERS}; do
+    name_ip=($(echo $node | tr "," "\n"))
     ${SSH_CMD} root@${name_ip[1]} "if [ ! -d ${NODE_CERTS_AND_CONFIGS_DIR} ]; then mkdir -p ${NODE_CERTS_AND_CONFIGS_DIR}; fi"
     ${SCP_CMD} ${CERTS} root@${name_ip[1]}:${NODE_CERTS_AND_CONFIGS_DIR}
   done
@@ -31,7 +29,7 @@ function update_configs() {
 
   CONFIGS=''
   PERFORM_ETCD_DATA_RESET=false
-  ${DIR}/utils/workdir ensure_certs_and_configs_mirror_dir_exists
+  source ${DIR}/utils/workdir ensure_certs_and_configs_mirror_dir_exists
 
   for config in "$@"; do
     if [ "${config}" != "encryption-config.yaml" ]; then
@@ -41,8 +39,8 @@ function update_configs() {
       # IF it does not exist yet on all controller nodes
       # OR if an etcd data reset is forced
       DIFFERS_ON='' ; SAME_ON='' ; NOT_YET_ON=''
-      for node in ${NODES}; do
-        name_ip=($(echo $node | tr "=" "\n"))
+      for node in ${CONTROLLERS}; do
+        name_ip=($(echo $node | tr "," "\n"))
         if [ -d ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]} ]; then rm -rf ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]}; fi
         mkdir -p ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]}
         ${SCP_CMD} root@${name_ip[1]}:${NODE_CERTS_AND_CONFIGS_DIR}/${config} ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]}/${config}
@@ -76,8 +74,8 @@ function update_configs() {
     fi
   done
 
-  for node in ${NODES}; do
-    name_ip=($(echo $node | tr "=" "\n"))
+  for node in ${CONTROLLERS}; do
+    name_ip=($(echo $node | tr "," "\n"))
     ${SSH_CMD} root@${name_ip[1]} "if [ ! -d ${NODE_CERTS_AND_CONFIGS_DIR} ]; then mkdir -p ${NODE_CERTS_AND_CONFIGS_DIR}; fi"
     if [ "${PERFORM_ETCD_DATA_RESET}" = true ]; then
       echo "INFO: performing etcd data reset on ${name_ip[0]}"
@@ -90,150 +88,67 @@ function update_configs() {
 }
 
 function install_etcd() {
-  CLIENT_PORT=2379
-  PEER_PORT=2380
-  CLUSTER_TOKEN=''
-  ETCD_VERSION=''
-  FORCE_UPDATE=false
-  while [[ $# -gt 0 ]]; do
-      key="$1"
-      echo $key
-      case "$key" in
-        -cp=*|--client-port=*)
-        CLIENT_PORT="${key#*=}"
-        ;;
-        -pp=*|--peer-port=*)
-        PEER_PORT="${key#*=}"
-        ;;
-        -t=*|--cluster-token=*)
-        CLUSTER_TOKEN="${key#*=}"
-        ;;
-        -ev=*|--etcd-version=*)
-        ETCD_VERSION="${key#*=}"
-        ;;
-        -f|--force-update)
-        FORCE_UPDATE=true
-        ;;
-        *)
-        # do nothing
-        ;;
-      esac
-      # Shift after checking all the cases to get the next option
-      shift
-  done
+  # PARAMS=''
+  # if [ "${ETCD_PEER_PORT}" != "2380" ]; then PARAMS="${PARAMS} -pp=${ETCD_PEER_PORT}"; fi
+  # if [ "${ETCD_CLIENT_PORT}" != "2379" ]; then PARAMS="${PARAMS} -cp=${ETCD_CLIENT_PORT}"; fi
+  # if [ "${ETCD_CLUSTER_TOKEN}" != "" ]; then PARAMS="${PARAMS} -t=${ETCD_CLUSTER_TOKEN}"; fi
+  # if [ "${ETCD_VERSION}" != "" ]; then PARAMS="${PARAMS} -ev=${ETCD_VERSION}"; fi
+  # if [ "${FORCE_UPDATE}" = true ]; then PARAMS="${PARAMS} -f"; fi
 
-  PARAMS=''
-  if [ "${PEER_PORT}" != "2380" ]; then PARAMS="${PARAMS} -pp=${PEER_PORT}"; fi
-  if [ "${CLIENT_PORT}" != "2379" ]; then PARAMS="${PARAMS} -cp=${CLIENT_PORT}"; fi
-  if [ "${CLUSTER_TOKEN}" != "" ]; then PARAMS="${PARAMS} -t=${CLUSTER_TOKEN}"; fi
-  if [ "${ETCD_VERSION}" != "" ]; then PARAMS="${PARAMS} -ev=${ETCD_VERSION}"; fi
-  if [ "${FORCE_UPDATE}" = true ]; then PARAMS="${PARAMS} -f"; fi
-
-  for node in ${NODES}; do
-    name_ip=($(echo $node | tr "=" "\n"))
+  for node in ${CONTROLLERS}; do
+    name_ip=($(echo $node | tr "," "\n"))
     CLUSTER_MEMBERS=''
-    for cmu in ${NODES}; do
+    for cmu in ${CONTROLLERS}; do
       if [ "${cmu}" != "${node}" ]; then
-        cmu_name_ip=($(echo $cmu | tr "=" "\n"))
-        CLUSTER_MEMBERS="$CLUSTER_MEMBERS -cmu=${cmu_name_ip[1]}:${PEER_PORT}"
+        CLUSTER_MEMBERS="${CLUSTER_MEMBERS} -cmu=${cmu}"
       fi
     done
 
-    ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/controller/setup_etcd.sh -nwd=${NODE_WORK_DIR} -ip=${name_ip[1]} ${CLUSTER_MEMBERS}${PARAMS}"
+    # ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/controller/setup_etcd.sh -nwd=${NODE_WORK_DIR} -ip=${name_ip[1]} ${CLUSTER_MEMBERS}${PARAMS}"
+    if [ "${DEBUG}" = true ]; then echo "[DEBUG]: calling: ${SSH_CMD} root@${name_ip[1]} ${NODE_SCRIPTS_DIR}/controller/setup_etcd.sh $@ -ip=${name_ip[1]} ${CLUSTER_MEMBERS} ${NODE_ARGS}" ; fi
+    ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/controller/setup_etcd.sh $@ -ip=${name_ip[1]} ${CLUSTER_MEMBERS} ${NODE_ARGS}"
   done
 }
 
 function install_kubernetes_controller() {
-  CLIENT_PORT=2379
-  FORCE_UPDATE=false
-  while [[ $# -gt 0 ]]; do
-      key="$1"
-      echo $key
-      case "$key" in
-        -cp=*|--client-port=*)
-        CLIENT_PORT="${key#*=}"
-        ;;
-        -f|--force-update)
-        FORCE_UPDATE=true
-        ;;
-        *)
-        # do nothing
-        ;;
-      esac
-      # Shift after checking all the cases to get the next option
-      shift
-  done
+  # PARAMS=''
+  # if [ "${ETCD_CLIENT_PORT}" != "2379" ]; then PARAMS="${PARAMS} -cp=${ETCD_CLIENT_PORT}"; fi
+  # if [ "${CLUSTER_NAME}" != "kubicluster" ]; then PARAMS="${PARAMS} -cl=${CLUSTER_NAME}"; fi
+  # if [ "${FORCE_UPDATE}" = true ]; then PARAMS="${PARAMS} -f"; fi
 
-  PARAMS=''
-  if [ "${CLIENT_PORT}" != "2379" ]; then PARAMS="${PARAMS} -cp=${CLIENT_PORT}"; fi
-  if [ "${CLUSTER_NAME}" != "kubicluster" ]; then PARAMS="${PARAMS} -cl=${CLUSTER_NAME}"; fi
-  if [ "${FORCE_UPDATE}" = true ]; then PARAMS="${PARAMS} -f"; fi
-
-  for node in ${NODES}; do
-    name_ip=($(echo $node | tr "=" "\n"))
+  for node in ${CONTROLLERS}; do
+    name_ip=($(echo $node | tr "," "\n"))
+    # TODO can be derived from -c instead of using -cmu
     ETCD_CLUSTER_MEMBERS=''
-    for cmu in ${NODES}; do
-      # if [ "${cmu}" != "${node}" ]; then
-        cmu_name_ip=($(echo $cmu | tr "=" "\n"))
-        ETCD_CLUSTER_MEMBERS="$ETCD_CLUSTER_MEMBERS -cmu=https://${cmu_name_ip[1]}:${CLIENT_PORT}"
-      # fi
+    for cmu in ${CONTROLLERS}; do
+        ETCD_CLUSTER_MEMBERS="${ETCD_CLUSTER_MEMBERS} -cmu=${cmu}"
     done
 
-    ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/controller/setup_kubernetes_controller.sh -nwd=${NODE_WORK_DIR} -ip=${name_ip[1]} ${ETCD_CLUSTER_MEMBERS}${PARAMS}"
+    if [ "${DEBUG}" = true ]; then echo "[DEBUG]: calling: ${SSH_CMD} root@${name_ip[1]} ${NODE_SCRIPTS_DIR}/controller/setup_kubernetes_controller.sh -ip=${name_ip[1]} ${ETCD_CLUSTER_MEMBERS} ${NODE_ARGS}" ; fi
+    ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/controller/setup_kubernetes_controller.sh -ip=${name_ip[1]} ${ETCD_CLUSTER_MEMBERS} ${NODE_ARGS}"
   done
 }
 
-REMAINING_ARGS=''
-NODES=''
-CLUSTER_NAME='kubicluster'
-PEER_PORT=2380
-FORCE_ETCD_DATA_RESET=false
-# As long as there is at least one more argument, keep looping
-while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-        -cl=*|--cluster=*)
-        CLUSTER_NAME="${key#*=}"
-        ;;
-        -c|--controller-node)
-        shift # past the key and to the value
-        NODES="${NODES} $1"
-        ;;
-        -pp=*|--peer-port=*)
-        PEER_PORT="${key#*=}"
-        ;;
-        -fedr|--force-etcd-data-reset)
-        FORCE_ETCD_DATA_RESET=true
-        ;;
-        *)
-        PL=' ' ; if [ "${REMAINING_ARGS}" = "" ]; then PL=''; fi
-        REMAINING_ARGS="${REMAINING_ARGS}${PL}$key"
-        ;;
-    esac
-    # Shift after checking all the cases to get the next option
-    shift
-done
+source ${DIR}/utils/env-variables "$@"
 
-RARGS_ARRAY=($(echo $REMAINING_ARGS | tr " " "\n"))
-echo "running: ${RARGS_ARRAY[0]}"
-case "${RARGS_ARRAY[0]}" in
+case "${SUB_CMD}" in
   'update_scripts_in_nodes')
     update_scripts_in_nodes
     ;;
   update_certs)
-    update_certs "${RARGS_ARRAY[@]:1}"
+    update_certs "${RARGS_ARRAY[@]}"
     ;;
   update_configs)
     # TODO check for -cip/--controller-ip and exit if not specified
-    update_configs "${RARGS_ARRAY[@]:1}"
+    update_configs "${RARGS_ARRAY[@]}"
     ;;
   install_etcd)
     # TODO check for essential args and exit if not specified
-    install_etcd "${RARGS_ARRAY[@]:1}"
+    install_etcd
     ;;
   install_kubernetes_controller)
     # TODO check for essential args and exit if not specified
-    install_kubernetes_controller "${RARGS_ARRAY[@]:1}"
+    install_kubernetes_controller
     ;;
   help)
     # TODO improve documentation
@@ -244,7 +159,7 @@ case "${RARGS_ARRAY[0]}" in
     # TODO check for -cip/--controller-ip and exit if not specified
     update_certs ca kubernetes service-accounts calico-cni
     update_configs admin.kubeconfig kube-controller-manager.kubeconfig kube-scheduler.kubeconfig encryption-config.yaml
-    install_etcd "${RARGS_ARRAY[@]}"
-    install_kubernetes_controller "${RARGS_ARRAY[@]}"
+    install_etcd
+    install_kubernetes_controller
     ;;
 esac

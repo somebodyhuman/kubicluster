@@ -1,0 +1,8 @@
+#!/bin/bash
+
+## some standard strings to prevent typos
+if [ "${IMAGES}" = "" ];            then IMAGES='images' ; fi
+if [ "${CERTS_AND_CONFIGS}" = "" ]; then CERTS_AND_CONFIGS='certs_and_configs' ; fi
+if [ "${TOOLS}" = "" ];             then TOOLS='tools' ; fi
+if [ "${SCRIPTS}" = "" ];           then SCRIPTS='scripts' ; fi
+if [ "${VM_CONFIGS}" = "" ];        then VM_CONFIGS='vm_configs' ; fi

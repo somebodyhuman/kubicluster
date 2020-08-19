@@ -2,36 +2,33 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-REMAINING_ARGS=''
-NODE_WORK_DIR=''
-CLIENT_PORT=2379
-CALICO_VERSION='3.11.3'
-FORCE_UPDATE=false
+source ${DIR}/../utils/env-variables "$@"
 
-INITIAL_ETCD_CLUSTER=''
-while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-        -nwd=*|--node-work-dir=*)
-        NODE_WORK_DIR="${key#*=}"
-        ;;
-        -v=*|--version=*)
-        CALICO_VERSION="${key#*=}"
-        ;;
-        -f|--force-update)
-        FORCE_UPDATE=true
-        ;;
-        -cmu=*|--cluster-member-uri=*)
-        PL=',' ; if [ "${INITIAL_ETCD_CLUSTER}" = "" ]; then PL=''; fi
-        INITIAL_ETCD_CLUSTER="${INITIAL_ETCD_CLUSTER}${PL}${key#*=}"
-        ;;
-        *)
-        REMAINING_ARGS="${REMAINING_ARGS} $key"
-        ;;
-    esac
-    # Shift after checking all the cases to get the next option
-    shift
-done
+# REMAINING_ARGS=''
+# INITIAL_ETCD_CLUSTER=''
+# while [[ $# -gt 0 ]]; do
+#     key="$1"
+#     case "$key" in
+#         -nwd=*|--node-work-dir=*)
+#         NODE_WORK_DIR="${key#*=}"
+#         ;;
+#         -v=*|--version=*)
+#         CALICO_VERSION="${key#*=}"
+#         ;;
+#         -f|--force-update)
+#         FORCE_UPDATE=true
+#         ;;
+#         -cmu=*|--cluster-member-uri=*)
+#         PL=',' ; if [ "${INITIAL_ETCD_CLUSTER}" = "" ]; then PL=''; fi
+#         INITIAL_ETCD_CLUSTER="${INITIAL_ETCD_CLUSTER}${PL}${key#*=}"
+#         ;;
+#         *)
+#         REMAINING_ARGS="${REMAINING_ARGS} $key"
+#         ;;
+#     esac
+#     # Shift after checking all the cases to get the next option
+#     shift
+# done
 
 CERTS_AND_CONFIGS_DIR=${NODE_WORK_DIR}/certs_and_configs
 

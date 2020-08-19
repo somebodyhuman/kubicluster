@@ -1,0 +1,267 @@
+#!/bin/bash
+# This file contains all variables used by the scripts.
+# Any variable can be overwritten by setting it as an environment variable.
+# Some can also be overwritten by adding arguments to commands relying on those variables
+THIS_UTILS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+source ${THIS_UTILS_DIR}/env-strings
+
+## arguments that get passed on to the nodes
+NODE_ARGS="$@"
+
+## tool versions on all nodes
+if [ "${ETCD_VERSION}" = "" ];        then ETCD_VERSION='3.4.10' ; fi
+#### low level runtimes
+# if [ "${RUNC_VERSION}" = "" ];        then RUNC_VERSION='1.0.0-rc91' ; fi
+if [ "${RUNC_VERSION}" = "" ];        then RUNC_VERSION='1.3.6' ; fi
+if [ "${KATA_VERSION}" = "" ];        then KATA_VERSION='1.11.2' ; fi
+### high level runtimes
+if [ "${CONTAINERD_VERSION}" = "" ];  then CONTAINERD_VERSION='1.3.6' ; fi
+### kubernetes itself
+if [ "${KUBERNETES_VERSION}" = "" ];  then KUBERNETES_VERSION='1.18.5' ; fi
+### kubernetes networking
+if [ "${CNI_PLUGINS_VERSION}" = "" ]; then CNI_PLUGINS_VERSION='0.8.6' ; fi
+if [ "${CALICO_VERSION}" = "" ];      then CALICO_VERSION='3.11.3' ; fi
+
+# on hypervisor and on all nodes
+if [ "${FORCE_UPDATE}" = "" ];                then FORCE_UPDATE=false ; fi
+if [ "${DEBUG}" != true ];                    then DEBUG=false ; fi
+
+## on all nodes
+if [ "${CLUSTER_NAME}" = "" ];                then CLUSTER_NAME='kubicluster'; fi
+if [ "${NODE_WORK_DIR}" = "" ];               then NODE_WORK_DIR=/opt/kubicluster ; fi
+if [ "${NODE_SCRIPTS_DIR}" = "" ];            then NODE_SCRIPTS_DIR=${NODE_WORK_DIR}/${SCRIPTS} ; fi
+if [ "${NODE_CERTS_AND_CONFIGS_DIR}" = "" ];  then NODE_CERTS_AND_CONFIGS_DIR=${NODE_WORK_DIR}/${CERTS_AND_CONFIGS} ; fi
+if [ "${ETCD_CLIENT_PORT}" = "" ];            then ETCD_CLIENT_PORT=2379 ; fi
+if [ "${CLUSTER_DNS}" = "" ];                 then CLUSTER_DNS='10.32.0.10' ; fi
+if [ "${CLUSTER_IP_RANGE}" = "" ];            then CLUSTER_IP_RANGE='10.32.0.0/24' ; fi
+if [ "${CLUSTER_CIDR}" = "" ];                then CLUSTER_CIDR='10.200.0.0/16' ; fi
+if [ "${SERVICE_NODE_PORT_RANGE}" = "" ];     then SERVICE_NODE_PORT_RANGE='30000-32767' ; fi
+if [ "${CERT_HOSTNAME}" = "" ];               then CERT_HOSTNAME="127.0.0.1,localhost,10.32.0.1,kubernetes.default" ; fi
+# note: controller hostnames and ips will be automatically attached
+
+## on controller nodes only
+if [ "${ETCD_DATA_DIR}" = "" ];         then ETCD_DATA_DIR=${NODE_WORK_DIR}/etcd_data ; fi
+if [ "${FORCE_ETCD_DATA_RESET}" = "" ]; then FORCE_ETCD_DATA_RESET=false ; fi
+if [ "${ETCD_PEER_PORT}" = "" ];        then ETCD_PEER_PORT=2380 ; fi
+if [ "${ETCD_CLUSTER_TOKEN}" = "" ];    then ETCD_CLUSTER_TOKEN=etcd-kubicluster ; fi
+
+## on worker nodes only
+if [ "${CNI_CONF_DIR}" = "" ];    then CNI_CONF_DIR=/etc/cni/net.d ; fi
+
+if [ "${CALICO_USER}" = "" ];   then CALICO_USER='calico-cni' ; fi
+
+
+REMAINING_ARGS=''
+CONTROLLERS='' ; WORKERS=''
+
+
+
+# As long as there is at least one more argument, keep looping
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+# --- 010
+      ## general
+      # -cip=*|--controller-ip=*)
+      # CONTROLLER_IP="${key#*=}"
+      # ;;
+      # -chn=*|--controller-hostname=*)
+      # CONTROLLER_HOSTNAME="${key#*=}"
+      # ;;
+# --- 011 general
+      -c=*|--cpus=*)
+      VCPUS="${key#*=}"
+      ;;
+      -m=*|--mem=*)
+      VMEM="${key#*=}"
+      ;;
+      -sd=*|--storage-dir=*)
+      VIRT_STORAGE_DIR="${key#*=}"
+      ;;
+# --- 021
+      ## etcd
+      -t=*|--cluster-token=*)
+      ETCD_CLUSTER_TOKEN="${key#*=}"
+      ;;
+      ## general
+      -fedr|--force-etcd-data-reset)
+      FORCE_ETCD_DATA_RESET=true
+      ;;
+# --- 032
+      ## runc
+      -rv=*|--runc-version=*)
+      RUNC_VERSION="${key#*=}"
+      ;;
+      ## kubernetes worker
+      -u=*|--user=*)
+      CALICO_USER="${key#*=}"
+      ;;
+      ## general
+# --- ALL
+      -f|--force-update)
+      FORCE_UPDATE=true
+      ;;
+      -d|--debug)
+      DEBUG=true
+      ;;
+      -cl=*|--cluster=*)
+      CLUSTER_NAME="${key#*=}"
+      ;;
+      -c|--controller-node)
+      shift # past the key and to the value
+      CONTROLLERS="${CONTROLLERS} $1"
+      CERT_HOSTNAME="${CERT_HOSTNAME},$1"
+      ;;
+      -clb|--controller-lb-ip)
+      shift # past the key and to the value
+      CONTROLLER_LB_IP="$1"
+      ;;
+      -w|--worker-node)
+      shift # past the key and to the value
+      WORKERS="${WORKERS} $1"
+      ;;
+      -pp=*|--peer-port=*)
+      ETCD_PEER_PORT="${key#*=}"
+      ;;
+      -cp=*|--client-port=*)
+      ETCD_CLIENT_PORT="${key#*=}"
+      ;;
+      -ev=*|--etcd-version=*)
+      ETCD_VERSION="${key#*=}"
+      ;;
+      -cdv=*|--containerd-version=*)
+      CONTAINERD_VERSION="${key#*=}"
+      ;;
+      -katav=*|--kata-version=*)
+      KATA_VERSION="${key#*=}"
+      ;;
+      -runcv=*|--runc-version=*)
+      RUNC_VERSION="${key#*=}"
+      ;;
+      -kv=*|--kubernetes-version=*)
+      KUBERNETES_VERSION="${key#*=}"
+      ;;
+      -calicov=*|--calico-version=*)
+      CALICO_VERSION="${key#*=}"
+      ;;
+      *)
+      PL=' ' ; if [ "${REMAINING_ARGS}" = "" ]; then PL=''; fi
+      REMAINING_ARGS="${REMAINING_ARGS}${PL}$key"
+      ;;
+    esac
+    # Shift after checking all the cases to get the next option
+    shift
+done
+
+# -clb / --controller-lb-ip / CONTROLLER_LB_IP is not set, use the first given controller
+if [ "${CONTROLLER_LB_IP}" = "" ]; then
+  CONTROLLERS_ARRAY=($(echo $CONTROLLERS | tr " " "\n"))
+  CONTROLLER_01=($(echo $CONTROLLERS_ARRAY[0] | tr "," "\n"))
+  CONTROLLER_LB_IP="${CONTROLLER_01[0]}"
+fi
+
+REMARGS_ARRAY=($(echo ${REMAINING_ARGS} | tr " " "\n"))
+echo "REMAINING ${REMAINING_ARGS}"
+SUB_CMD=${REMARGS_ARRAY[0]}
+RARGS_ARRAY=${REMARGS_ARRAY[@]:1}
+echo "sub command (or first remaining argument): ${SUB_CMD}"
+echo "(other) remaining arguments: ${RARGS_ARRAY[@]}"
+
+# the arguments to pass on to scripts called via ssh to rebuild environment variables there
+# sub command = first remaining argument is only a sub command if it does not start with -
+# echo "NODE_ARGS before vetting: ${NODE_ARGS}"
+if case ${SUB_CMD} in -*) false;; *) true;; esac;
+  then
+    NODE_ARGS="${NODE_ARGS//${SUB_CMD}/}"
+fi
+echo "all arguments (without sub command): ${NODE_ARGS}"
+#
+ALL_ARGS=
+echo "DEBUG: ${DEBUG}"
+if [ "${DEBUG}" = true ]; then
+  # TODO put defaults in to variables prefixed with DEFAULT_
+  echo "[DEBUG]: tool versions"
+  echo "[DEBUG]: CFSSL_VERSION      =${CFSSL_VERSION}"
+  echo "[DEBUG]: ETCD_VERSION       =${ETCD_VERSION}"
+  echo "[DEBUG]: RUNC_VERSION       =${RUNC_VERSION}"
+  echo "[DEBUG]: KATA_VERSION       =${KATA_VERSION}"
+  echo "[DEBUG]: CONTAINERD_VERSION =${CONTAINERD_VERSION}"
+  echo "[DEBUG]: KUBERNETES_VERSION =${KUBERNETES_VERSION}"
+  echo "[DEBUG]: CNI_PLUGINS_VERSION=${CNI_PLUGINS_VERSION}"
+  echo "[DEBUG]: CALICO_VERSION     =${CALICO_VERSION}"
+  echo "[DEBUG]: ---"
+  echo "[DEBUG]: values of optional hypervisor arguments"
+  if [ "${SCRIPTS_DIR}" != "$(realpath ${THIS_DIR}/../scripts)" ];      then echo "[DEBUG]: SCRIPTS_DIR=${SCRIPTS_DIR} (default: $(realpath ${THIS_DIR}/../scripts))"; fi
+  if [ "${IMAGES_DIR}" != "${WORKDIR}/${IMAGES}" ];                     then echo "[DEBUG]: IMAGES_DIR=${IMAGES_DIR} (default: ${WORKDIR}/${IMAGES})"; fi
+  if [ "${TEMPLATE_IP}" != "192.168.122.254" ];                         then echo "[DEBUG]: TEMPLATE_IP=${TEMPLATE_IP} (default: 192.168.122.254)"; fi
+  if [ "${TEMPLATE_XML}" != "conf/vm-template.xml" ];                   then echo "[DEBUG]: TEMPLATE_XML=${TEMPLATE_XML} (default: conf/vm-template.xml)"; fi
+  if [ "${VM_CONFIGS_DIR}" != "${WORKDIR}/${VM_CONFIGS}" ];             then echo "[DEBUG]: VM_CONFIGS_DIR=${VM_CONFIGS_DIR} (default: ${WORKDIR}/${VM_CONFIGS})"; fi
+  if [ "${TEMPLATE_ROOT_SSH_KEY}" != "${IMAGES_DIR}/vm-template_rsa" ]; then echo "[DEBUG]: TEMPLATE_ROOT_SSH_KEY=${TEMPLATE_ROOT_SSH_KEY} (default: ${IMAGES_DIR}/vm-template_rsa)"; fi
+
+  if [ "${TOOLS_DIR}" != "${WORKDIR}/${TOOLS}" ];                       then echo "[DEBUG]: TOOLS_DIR=${TOOLS_DIR} (default: ${WORKDIR}/${TOOLS})"; fi
+
+  if [ "${KUBERNETES_ON_HYPERVISOR_DIR}" != "${TOOLS_DIR}/kubernetes-${KUBERNETES_VERSION}" ]; then
+    echo "[DEBUG]: KUBERNETES_ON_HYPERVISOR_DIR=${KUBERNETES_ON_HYPERVISOR_DIR} (default: ${TOOLS_DIR}/kubernetes-${KUBERNETES_VERSION})"
+  fi
+  if [ "${KUBECTL_CMD_ON_HYPERVISOR}" != "${KUBERNETES_ON_HYPERVISOR_DIR}/kubernetes/client/bin/kubectl" ];  then
+    echo "[DEBUG]: KUBECTL_CMD_ON_HYPERVISOR=${KUBECTL_CMD_ON_HYPERVISOR} (default: ${KUBERNETES_ON_HYPERVISOR_DIR}/kubernetes/client/bin/kubectl)"
+  fi
+
+  if [ "${RSA_KEYLENGTH}" != "8192" ];  then echo "[DEBUG]: RSA_KEYLENGTH=${RSA_KEYLENGTH} (default: 8192)"; fi
+  if [ "${CERTS_AND_CONFIGS_DIR}" != "${WORKDIR}/${CERTS_AND_CONFIGS}" ];         then echo "[DEBUG]: CERTS_AND_CONFIGS_DIR=${CERTS_AND_CONFIGS_DIR} (default: ${WORKDIR}/${CERTS_AND_CONFIGS})"; fi
+  if [ "${CERTS_AND_CONFIGS_MIRROR_DIR}" != "${CERTS_AND_CONFIGS_DIR}/mirror" ];  then echo "[DEBUG]: CERTS_AND_CONFIGS_MIRROR_DIR=${CERTS_AND_CONFIGS_MIRROR_DIR} (default: ${CERTS_AND_CONFIGS_DIR}/mirror)"; fi
+
+  if [ "${CA_CONFIG}" != "${CERTS_AND_CONFIGS_DIR}/ca-config.json" ]; then echo "[DEBUG]: CA_CONFIG=${CA_CONFIG} (default: ${CERTS_AND_CONFIGS_DIR}/ca-config.json)"; fi
+  if [ "${CA_CSR}" != "${CERTS_AND_CONFIGS_DIR}/ca-csr.json" ];       then echo "[DEBUG]: CA_CSR=${CA_CSR} (default: ${CERTS_AND_CONFIGS_DIR}/ca-csr.json)"; fi
+  if [ "${CA_BARE}" != "${CERTS_AND_CONFIGS_DIR}/ca" ];               then echo "[DEBUG]: CA_BARE=${CA_BARE} (default: ${CERTS_AND_CONFIGS_DIR}/ca)"; fi
+  if [ "${CA_PUB}" != "${CERTS_AND_CONFIGS_DIR}/ca.pem" ];            then echo "[DEBUG]: CA_PUB=${CA_PUB} (default: ${CERTS_AND_CONFIGS_DIR}/ca.pem)"; fi
+  if [ "${CA_KEY}" != "${CERTS_AND_CONFIGS_DIR}/ca-key.pem" ];        then echo "[DEBUG]: CA_KEY=${CA_KEY} (default: ${CERTS_AND_CONFIGS_DIR}/ca-key.pem)"; fi
+
+  if [ "${CFSSL_CMD}" != "${TOOLS_DIR}/cfssl-${CFSSL_VERSION}" ];  then echo "[DEBUG]: CFSSL_CMD=${CFSSL_CMD} (default: ${TOOLS_DIR}/cfssl-${CFSSL_VERSION})"; fi
+  if [ "${CFSSLJSON_CMD}" != "${TOOLS_DIR}/cfssljson-${CFSSL_VERSION}" ];  then echo "[DEBUG]: CFSSLJSON_CMD=${CFSSLJSON_CMD} (default: ${TOOLS_DIR}/cfssljson-${CFSSL_VERSION})"; fi
+  if [ "${CFSSLCERTINFO_CMD}" != "${TOOLS_DIR}/cfssl-certinfo-${CFSSL_VERSION}" ];  then echo "[DEBUG]: CFSSLCERTINFO_CMD=${CFSSLCERTINFO_CMD} (default: ${TOOLS_DIR}/cfssl-certinfo-${CFSSL_VERSION})"; fi
+  if [ "${RBAC_CLUSTER_NAME}" != "Kubicluster" ];  then echo "[DEBUG]: RBAC_CLUSTER_NAME=${RBAC_CLUSTER_NAME} (default: Kubicluster)"; fi
+
+  if [ "${SSH_TIMEOUT_IN_SEC}" != "10" ];  then echo "[DEBUG]: SSH_TIMEOUT_IN_SEC=${SSH_TIMEOUT_IN_SEC} (default: 10)"; fi
+  if [ "${SSH_OPTS}" != "-i ${TEMPLATE_ROOT_SSH_KEY} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ConnectionAttempts=1 -o ConnectTimeout=${SSH_TIMEOUT_IN_SEC}" ]; then
+    echo "[DEBUG]: SSH_OPTS=${SSH_OPTS} (default: -i ${TEMPLATE_ROOT_SSH_KEY} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ConnectionAttempts=1 -o ConnectTimeout=${SSH_TIMEOUT_IN_SEC})";
+  fi
+  if [ "${SSH_CMD}" != "ssh ${SSH_OPTS}" ];  then echo "[DEBUG]: SSH_CMD=${SSH_CMD} (default: ssh ${SSH_OPTS})"; fi
+  if [ "${SCP_CMD}" != "scp ${SSH_OPTS}" ];  then echo "[DEBUG]: SCP_CMD=${SCP_CMD} (default: scp ${SSH_OPTS})"; fi
+
+  if [ "${VCPUS}" != "1" ];                                   then echo "[DEBUG]: VCPUS=${VCPUS} (default: 1)"; fi
+  if [ "${VMEM}" != "4194304" ];                              then echo "[DEBUG]: VMEM=${VMEM} (default: 4194304)"; fi
+  if [ "${QEMU_TYPE}" != "qcow2" ];                           then echo "[DEBUG]: QEMU_TYPE=${QEMU_TYPE} (default: qcow2)"; fi
+  if [ "${VIRT_STORAGE_DIR}" != "/var/lib/libvirt/images" ];  then echo "[DEBUG]: VIRT_STORAGE_DIR=${VIRT_STORAGE_DIR} (default: /var/lib/libvirt/images)"; fi
+
+  # if [ "${HN_ARG}" != "" ]; then echo "[DEBUG]: HN_ARG=${HN_ARG}"; fi
+  echo "[DEBUG]: ---"
+  echo "[DEBUG]: values of optional arguments (used on hypervisor and on nodes)"
+  if [ "${CLUSTER_NAME}" != "kubicluster" ];  then echo "[DEBUG]: CLUSTER_NAME=${CLUSTER_NAME} (default: kubicluster)"; fi
+
+  if [ "${FORCE_UPDATE}" != false ];          then echo "[DEBUG]: FORCE_UPDATE=${FORCE_UPDATE} (default: false)"; fi
+
+  if [ "${NODE_WORK_DIR}" != "/opt/kubicluster" ];                                    then echo "[DEBUG]: NODE_WORK_DIR=${NODE_WORK_DIR} (default: /opt/kubicluster)"; fi
+  if [ "${NODE_SCRIPTS_DIR}" != "${NODE_WORK_DIR}/${SCRIPTS}" ];                      then echo "[DEBUG]: NODE_SCRIPTS_DIR=${NODE_SCRIPTS_DIR} (default: ${NODE_WORK_DIR}/${SCRIPTS})"; fi
+  if [ "${NODE_CERTS_AND_CONFIGS_DIR}" != "${NODE_WORK_DIR}/${CERTS_AND_CONFIGS}" ];  then echo "[DEBUG]: NODE_CERTS_AND_CONFIGS_DIR=${NODE_CERTS_AND_CONFIGS_DIR} (default: ${NODE_WORK_DIR}/${CERTS_AND_CONFIGS})"; fi
+
+  if [ "${CLUSTER_DNS}" != "10.32.0.10" ];              then echo "[DEBUG]: CLUSTER_DNS=${CLUSTER_DNS} (default: 10.32.0.10)"; fi
+  if [ "${CLUSTER_IP_RANGE}" != "10.32.0.0/24" ];       then echo "[DEBUG]: CLUSTER_IP_RANGE=${CLUSTER_IP_RANGE} (default: 10.32.0.0/24)"; fi
+  if [ "${CLUSTER_CIDR}" != "10.200.0.0/16" ];          then echo "[DEBUG]: CLUSTER_CIDR=${CLUSTER_CIDR} (default: 10.200.0.0/16)"; fi
+  if [ "${SERVICE_NODE_PORT_RANGE}" != "30000-32767" ]; then echo "[DEBUG]: SERVICE_NODE_PORT_RANGE=${SERVICE_NODE_PORT_RANGE} (default: 30000-32767)"; fi
+
+  if [ "${CERT_HOSTNAME}" != "127.0.0.1,localhost,10.32.0.1,kubernetes.default" ]; then echo "[DEBUG]: CERT_HOSTNAME=${CERT_HOSTNAME} (default: 127.0.0.1,localhost,10.32.0.1,kubernetes.default)"; fi
+
+  if [ "${ETCD_DATA_DIR}" != "${NODE_WORK_DIR}/etcd_data" ];  then echo "[DEBUG]: ETCD_DATA_DIR=${ETCD_DATA_DIR} (default: ${NODE_WORK_DIR}/etcd_data)"; fi
+  if [ "${ETCD_CLIENT_PORT}" != "2379" ];                     then echo "[DEBUG]: ETCD_CLIENT_PORT=${ETCD_CLIENT_PORT} (default: 2379)"; fi
+  if [ "${ETCD_PEER_PORT}" != "2380" ];                       then echo "[DEBUG]: ETCD_PEER_PORT=${ETCD_PEER_PORT} (default: 2380)"; fi
+  if [ "${FORCE_ETCD_DATA_RESET}" != false ];                 then echo "[DEBUG]: FORCE_ETCD_DATA_RESET=${FORCE_ETCD_DATA_RESET} (default: false)"; fi
+  if [ "${ETCD_CLUSTER_TOKEN}" != "etcd-kubicluster" ];       then echo "[DEBUG]: ETCD_CLUSTER_TOKEN=${ETCD_CLUSTER_TOKEN} (default: etcd-kubicluster)"; fi
+
+  ## on worker nodes only
+  if [ "${CNI_CONF_DIR}" != "/etc/cni/net.d" ];       then echo "[DEBUG]: CNI_CONF_DIR=${CNI_CONF_DIR} (default: /etc/cni/net.d)"; fi
+
+  if [ "${CALICO_USER}" != "calico-cni" ];    then echo "[DEBUG]: CALICO_USER=${CALICO_USER} (default: calico-cni)"; fi
+  echo "[DEBUG]: ---"
+fi

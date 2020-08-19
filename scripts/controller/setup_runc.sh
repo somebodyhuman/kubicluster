@@ -2,30 +2,29 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-REMAINING_ARGS=''
-NODE_WORK_DIR=''
-KUBERNETES_VERSION='1.18.5'
-FORCE_UPDATE=false
+source ${DIR}/../utils/env-variables "$@"
 
-while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-        -nwd=*|--node-work-dir=*)
-        NODE_WORK_DIR="${key#*=}"
-        ;;
-        -v=*|--version=*)
-        KUBERNETES_VERSION="${key#*=}"
-        ;;
-        -f|--force-update)
-        FORCE_UPDATE=true
-        ;;
-        *)
-        REMAINING_ARGS="${REMAINING_ARGS} $key"
-        ;;
-    esac
-    # Shift after checking all the cases to get the next option
-    shift
-done
+# REMAINING_ARGS=''
+#
+# while [[ $# -gt 0 ]]; do
+#     key="$1"
+#     case "$key" in
+#         -nwd=*|--node-work-dir=*)
+#         NODE_WORK_DIR="${key#*=}"
+#         ;;
+#         -v=*|--version=*)
+#         KUBERNETES_VERSION="${key#*=}"
+#         ;;
+#         -f|--force-update)
+#         FORCE_UPDATE=true
+#         ;;
+#         *)
+#         REMAINING_ARGS="${REMAINING_ARGS} $key"
+#         ;;
+#     esac
+#     # Shift after checking all the cases to get the next option
+#     shift
+# done
 
 KUBERNETES_PARENT_DIR=${NODE_WORK_DIR}/kubernetes-${KUBERNETES_VERSION}
 KUBERNETES_DIR=${KUBERNETES_PARENT_DIR}/kubernetes

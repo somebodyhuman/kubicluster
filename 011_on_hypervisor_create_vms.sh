@@ -2,47 +2,20 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-source ${DIR}/utils/env-variables
-
-REMAINING_ARGS=''
-VMS=''
-VCPUS='1'
-VMEM='4194304'
-QEMU_TYPE='qcow2'
-VIRT_STORAGE_DIR=/var/lib/libvirt/images
-# As long as there is at least one more argument, keep looping
-while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-        -c=*|--cpus=*)
-        VCPUS="${key#*=}"
-        ;;
-        -m=*|--mem=*)
-        VMEM="${key#*=}"
-        ;;
-        -sd=*|--storage-dir=*)
-        VIRT_STORAGE_DIR="${key#*=}"
-        ;;
-        *)
-        REMAINING_ARGS="${REMAINING_ARGS} $key"
-        ;;
-    esac
-    # Shift after checking all the cases to get the next option
-    shift
-done
+source ${DIR}/utils/env-variables "$@"
 
 MAX_ATTEMPTS=18
 
-${DIR}/utils/workdir ensure_vm_configs_dir_exists
+# note that we run the workdir command using source to make sure it shares the environment with the current shell in which this script is running
+source ${DIR}/utils/workdir ensure_vm_configs_dir_exists
 
-TEMPLATE_IP="$(cat ${IMAGES_DIR}/vm-template-ip.txt)"
 # ensure template exists
 TEMPLATE_FILE=$(find ${IMAGES_DIR} -iregex "${IMAGES_DIR}/vm-template.*" | grep -e qcow2 -e img)
 
 OVERALL_EXIT_CODE=0
 
 for vm in ${REMAINING_ARGS}; do
-  vm_name_ip=($(echo $vm | tr "=" "\n"))
+  vm_name_ip=($(echo $vm | tr "," "\n"))
   VM_XML=${VM_CONFIGS_DIR}/${vm_name_ip[0]}.xml
   VM_FILE=${VIRT_STORAGE_DIR}/${vm_name_ip[0]}.qcow2
   if [ ! -e ${VM_FILE} ]; then
@@ -81,17 +54,14 @@ for vm in ${REMAINING_ARGS}; do
         vm_result=64
         break
       fi
-      refused=$(echo ${ssh_out} | grep "Connection refused")
-      echo ${ssh_out}
-      echo ${ssh_out} | grep "Connection refused"
-      if [ "${refused}" != "" ]; then
-        echo "connection refused, waiting ${TIMEOUT_IN_SEC} seconds before retry"
-        sleep ${TIMEOUT_IN_SEC}
+      if [ ${result} -eq 255 ]; then
+        echo "connection problem, waiting ${SSH_TIMEOUT_IN_SEC} seconds before retry"
+        sleep ${SSH_TIMEOUT_IN_SEC}
       else
-        echo "setting hostname of ${vm_name_ip[0]} via SSH command not successful ... waiting ${TIMEOUT_IN_SEC} seconds, before retry"
+        echo "setting hostname of ${vm_name_ip[0]} via SSH command not successful ... waiting ${SSH_TIMEOUT_IN_SEC} seconds, before retry"
       fi
       attempts=$((${attempts}+1))
-      # sleep ${TIMEOUT_IN_SEC}
+      # sleep ${SSH_TIMEOUT_IN_SEC}
     done
     if [[ ${vm_result} -eq 124 ]]; then echo "ssh connection problem or hostname configuration problem while configuring ${vm_name_ip[0]}." ; exit ${vm_result} ; fi
 
@@ -108,15 +78,14 @@ for vm in ${REMAINING_ARGS}; do
         vm_result=0
         break
       fi
-      refused=$(echo ${ssh_out} | grep "Connection refused")
-      if [ "${refused}" != "" ]; then
-        echo "connection refused, waiting ${TIMEOUT_IN_SEC} seconds before retry"
-        sleep ${TIMEOUT_IN_SEC}
+      if [ ${result} -eq 255 ]; then
+        echo "connection problem, waiting ${SSH_TIMEOUT_IN_SEC} seconds before retry"
+        sleep ${SSH_TIMEOUT_IN_SEC}
       else
-        echo "configuration confirmation for ${vm_name_ip[0]} not successful ... waiting ${TIMEOUT_IN_SEC} seconds, before retry"
+        echo "configuration confirmation for ${vm_name_ip[0]} not successful ... waiting ${SSH_TIMEOUT_IN_SEC} seconds, before retry"
       fi
       attempts=$((${attempts}+1))
-      # sleep ${TIMEOUT_IN_SEC}
+      # sleep ${SSH_TIMEOUT_IN_SEC}
     done
 
     if [[ ${vm_result} -ne 0 ]]; then echo "confirming configuration for ${vm_name_ip[0]} failed." ; exit ${vm_result} ; fi

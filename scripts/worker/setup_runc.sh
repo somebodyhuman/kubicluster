@@ -33,6 +33,7 @@ if [ ! -f ${NODE_WORK_DIR}/runc-v${RUNC_VERSION}.amd64 ]; then
   if ! (dpkg -s ca-certificates); then apt-get install -y ca-certificates; fi
   wget -q --show-progress --https-only --timestamping \
   "https://github.com/opencontainers/runc/releases/download/v${RUNC_VERSION}/runc.amd64" -O ${NODE_WORK_DIR}/runc-v${RUNC_VERSION}.amd64
+  # TODO handle wget exit code != 0
   chmod +x ${NODE_WORK_DIR}/runc-v${RUNC_VERSION}.amd64
 fi
 

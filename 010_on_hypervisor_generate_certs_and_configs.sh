@@ -48,6 +48,8 @@ EOF
 EOF
 
     ${CFSSL_CMD} gencert -initca ${CA_CSR} | ${CFSSLJSON_CMD} -bare ${CA_BARE}
+  else
+    echo "certificate authority ${CA_BARE} exists already"
   fi
 }
 
@@ -81,9 +83,6 @@ EOF
 }
 
 function generate_certs() {
-  # using the certificate authority to create all the needed signed certificates
-  GENCERT_ARGS="-ca=${CA_PUB} -ca-key=${CA_KEY} -config=${CA_CONFIG} -profile=kubicluster"
-
   CN_O_HN_ARRAY=($(echo $REMAINING_ARGS | tr " " "\n"))
   for cn_o_h in "$@"
   do
@@ -92,7 +91,7 @@ function generate_certs() {
     NAME_ROLE=($(echo ${NAME_ROLE_HOSTNAME[0]} | tr "=" "\n"))
     NAME_PARTS=($(echo ${NAME_ROLE[0]} | tr ":" "\n"))
     FILE_NAME=${NAME_PARTS[1]} ; if [ "${FILE_NAME}" = "" ]; then FILE_NAME=${NAME_PARTS[0]}; fi
-    if [ ! -e ${CERTS_AND_CONFIGS_DIR}/${FILE_NAME}.pem ]; then
+    if [ ! -e ${CERTS_AND_CONFIGS_DIR}/${FILE_NAME}.pem ]  || [ "${FORCE_UPDATE}" = true ]; then
       echo "generating_cert request for ${NAME_ROLE[0]} into ${FILE_NAME}-csr.json"
       cat > ${CERTS_AND_CONFIGS_DIR}/${FILE_NAME}-csr.json << EOF
 {
@@ -108,32 +107,35 @@ EOF
   done
 }
 
-function generate_config() {
-  NAME_PARTS=($(echo ${1} | tr ":" "\n"))
-  NAME=${NAME_PARTS[1]} ; if [ "${NAME}" = "" ]; then NAME=${NAME_PARTS[0]}; fi
+function generate_configs() {
+  for entity in "$@"
+  do
+    NAME_PARTS=($(echo ${entity} | tr ":" "\n"))
+    NAME=${NAME_PARTS[1]} ; if [ "${NAME}" = "" ]; then NAME=${NAME_PARTS[0]}; fi
 
-  config_file=${CERTS_AND_CONFIGS_DIR}/${NAME}.kubeconfig
-  SERVER_IP='127.0.0.1'
-  if [ "${NAME}" = "kube-proxy" ] || [ "${NAME}" = "calico-cni" ] ; then SERVER_IP=${CONTROLLER_LB_IP}; fi
-  if [ ! -e ${config_file} ]; then
-    echo "generating config for ${NAME} into ${NAME}.kubeconfig"
-    kubectl config set-cluster ${CLUSTER_NAME} --server=https://${SERVER_IP}:6443 \
-      --certificate-authority=${CA_PUB} \
-      --embed-certs=true --kubeconfig=${config_file}
+    config_file=${CERTS_AND_CONFIGS_DIR}/${NAME}.kubeconfig
+    SERVER_IP='127.0.0.1'
+    if [ "${NAME}" = "kube-proxy" ] || [ "${NAME}" = "calico-cni" ] ; then SERVER_IP=${CONTROLLER_LB_IP}; fi
+    if [ ! -e ${config_file} ] || [ "${FORCE_UPDATE}" = true ]; then
+      echo "generating config for ${NAME} into ${NAME}.kubeconfig"
+      kubectl config set-cluster ${CLUSTER_NAME} --server=https://${SERVER_IP}:6443 \
+        --certificate-authority=${CA_PUB} \
+        --embed-certs=true --kubeconfig=${config_file}
 
-    kubectl config set-credentials ${1} \
-      --client-certificate=${CERTS_AND_CONFIGS_DIR}/${NAME}.pem \
-      --client-key=${CERTS_AND_CONFIGS_DIR}/${NAME}-key.pem \
-      --embed-certs=true --kubeconfig=${config_file}
+      kubectl config set-credentials ${entity} \
+        --client-certificate=${CERTS_AND_CONFIGS_DIR}/${NAME}.pem \
+        --client-key=${CERTS_AND_CONFIGS_DIR}/${NAME}-key.pem \
+        --embed-certs=true --kubeconfig=${config_file}
 
-    kubectl config set-context default --cluster=${CLUSTER_NAME} \
-      --user=${1} \
-      --kubeconfig=${config_file}
+      kubectl config set-context default --cluster=${CLUSTER_NAME} \
+        --user=${entity} \
+        --kubeconfig=${config_file}
 
-    kubectl config use-context default --kubeconfig=${config_file}
-  else
-    echo "kubconfig for ${1} exists already"
-  fi
+      kubectl config use-context default --kubeconfig=${config_file}
+    else
+      echo "kubconfig for ${entity} exists already"
+    fi
+  done
 }
 
 function for_system_components() {
@@ -142,7 +144,7 @@ function for_system_components() {
   do
     generate_certs system:${component}=system:${component}
 
-    generate_config ${component}
+    generate_configs ${component}
   done
 }
 
@@ -153,7 +155,7 @@ function for_worker_nodes() {
   for worker in ${WORKERS}
   do
     worker_name_ip=($(echo $worker | tr "," "\n"))
-    if [ ! -e ${CERTS_AND_CONFIGS_DIR}/${worker_name_ip[0]}.pem ]; then
+    if [ ! -e ${CERTS_AND_CONFIGS_DIR}/${worker_name_ip[0]}.pem ] || [ "${FORCE_UPDATE}" = true ]; then
       echo "generating_cert for ${worker_name_ip[0]} (with IP: ${worker_name_ip[1]})"
       cat > ${CERTS_AND_CONFIGS_DIR}/${worker_name_ip[0]}-csr.json << EOF
 {
@@ -167,7 +169,8 @@ EOF
       echo "cert for ${worker_name_ip[0]} exists already"
     fi
     config_file=${CERTS_AND_CONFIGS_DIR}/${worker_name_ip[0]}.kubeconfig
-    if [ ! -e ${config_file} ]; then
+    if [ ! -e ${config_file} ] || [ "${FORCE_UPDATE}" = true ]; then
+      echo "(re)generating kubeconfig for ${worker_name_ip[0]}"
       kubectl config set-cluster ${CLUSTER_NAME} --server=https://${CONTROLLER_LB_IP}:6443 \
         --certificate-authority=${CA_PUB} \
         --embed-certs=true --kubeconfig=${config_file}
@@ -190,6 +193,9 @@ EOF
 
 source ${DIR}/utils/env-variables "$@"
 
+# using the certificate authority to create all the needed signed certificates
+GENCERT_ARGS="-ca=${CA_PUB} -ca-key=${CA_KEY} -config=${CA_CONFIG} -profile=kubicluster"
+
 case "${SUB_CMD}" in
   generate_ca)
     setup_cfssl
@@ -203,10 +209,14 @@ case "${SUB_CMD}" in
     setup_cfssl
     generate_certs "${RARGS_ARRAY[@]}"
     ;;
+  generate_configs)
+    setup_cfssl
+    generate_configs "${RARGS_ARRAY[@]}"
+    ;;
   for_system_components)
     setup_cfssl
     # TODO check for -cip/--controller-ip and exit if not specified
-    for_system_components admin kube-controller-man kube-proxy kube-scheduler
+    for_system_components "${RARGS_ARRAY[@]}"
     ;;
   for_worker_nodes)
     setup_cfssl
@@ -228,7 +238,7 @@ case "${SUB_CMD}" in
     generate_encryption_configs encryption-config
     generate_certs kubernetes=${RBAC_CLUSTER_NAME}@${CERT_HOSTNAME} service-accounts=${RBAC_CLUSTER_NAME} admin=system:masters
     generate_certs calico-cni=${RBAC_CLUSTER_NAME}
-    generate_config calico-cni admin
+    generate_configs calico-cni admin
     for_system_components kube-controller-manager kube-proxy kube-scheduler
     for_worker_nodes
     ;;

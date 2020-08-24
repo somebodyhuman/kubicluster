@@ -221,25 +221,44 @@ fi
 
 # check the detail status of the controller components
 # note: if we would only check if the services are running, we would miss permission issues (which are common points of misconfiguration if the cluster is setup manually)
-COMPS_STATUS=$(kubectl get componentstatuses --kubeconfig ${CERTS_AND_CONFIGS_DIR}/admin.kubeconfig)
-API_SERVER_STATUS=$(echo -e "${COMPS_STATUS}" | grep STATUS)
+attempts=0
+MAX_ATTEMPTS=3
+TIMEOUT_IN_SEC=10
 
-if [ "${API_SERVER_STATUS}" = "" ]; then
-  echo "Error: API Server not healthy or not reachable:"
-  echo "${COMPS_STATUS}"
-  exit 1
-else
-  echo "API Server healthy and reachable"
+COMPS_STATUS=''
+API_SERVER_STATUS=''
+EXIT_CODE=0
+
+while [[ ${attempts} -lt ${MAX_ATTEMPTS} ]]; do
   EXIT_CODE=0
-  for component in etcd controller-manager scheduler; do
-    COMP_STATUS=$(echo -e "${COMPS_STATUS}" | grep ${component} | grep Healthy)
-    if [ "${COMP_STATUS}" = "" ]; then
-      echo "Error: ${component} not healthy or not reachable:"
-      echo "${COMP_STATUS}"
-      EXIT_CODE=$((${EXIT_CODE} + 1))
-    fi
-  done
-fi
+  attempts=$((${attempts}+1))
+
+  COMPS_STATUS=$(kubectl get componentstatuses --kubeconfig ${CERTS_AND_CONFIGS_DIR}/admin.kubeconfig)
+  API_SERVER_STATUS=$(echo -e "${COMPS_STATUS}" | grep STATUS)
+
+  if [ "${API_SERVER_STATUS}" = "" ]; then
+    echo "Error: API Server not yet healthy or not reachable:"
+    echo "${COMPS_STATUS}"
+    EXIT_CODE=500
+  else
+    echo "API Server healthy and reachable"
+    for component in etcd controller-manager scheduler; do
+      COMP_STATUS=$(echo -e "${COMPS_STATUS}" | grep ${component} | grep Healthy)
+      if [ "${COMP_STATUS}" = "" ]; then
+        echo "Error: ${component} not yet healthy or not reachable:"
+        echo "${COMP_STATUS}"
+        EXIT_CODE=$((${EXIT_CODE} + 1))
+      fi
+    done
+  fi
+
+  if [ ${EXIT_CODE} -ne 0 ]; then sleep ${TIMEOUT_IN_SEC} ; else attempts=${MAX_ATTEMPTS} ; fi
+done
+
+if [ ${EXIT_CODE} -ne 0 ]; then echo "Error: API Server not healthy or not reachable (code ${EXIT_CODE})." ; exit ${EXIT_CODE} ; fi
+
+# TODO [minor] add checks if roles and role bindings already exist, before applying them
+# Error from server (AlreadyExists): clusterrolebindings.rbac.authorization.k8s.io "apiserver-kubelet-api-admin" already exists
 
 cat << EOF | ${KUBECTL_CMD} apply -f -
 apiVersion: rbac.authorization.k8s.io/v1beta1

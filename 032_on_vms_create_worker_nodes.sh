@@ -57,7 +57,7 @@ function install_runc() {
   for node in ${WORKERS}; do
     name_ip=($(echo $node | tr "," "\n"))
 
-    ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/worker/setup_runc.sh ${NODE_ARGS}"
+    ${SSH_CMD} root@${name_ip[1]} "bash -x ${NODE_SCRIPTS_DIR}/worker/setup_runc.sh ${NODE_ARGS}"
   done
 
   EXEC_ON_ONE_CONTROLLER=false

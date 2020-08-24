@@ -64,7 +64,7 @@ function update_configs() {
       if [ "${DIFFERS_ON}" != "" ]; then echo "encryption-config.yaml differs on ${SAME_ON}"; fi
       if [ "${DIFFERS_ON}" != "" ] || [ "${NOT_YET_ON}" != "" ]; then
         if [ ! "${FORCE_ETCD_DATA_RESET}" = true ]; then
-          echo "WARN: -fedr/--fore-etcd-data-reset is not set, so encryption-config.yaml state is not changed on any node. Re-run with -fedr or resolve manually before re-running withou -fedr."
+          echo "WARN: -fedr/--fore-etcd-data-reset is not set, so encryption-config.yaml state is not changed on any node. Re-run with -fedr or resolve manually before re-running without -fedr."
         else
           echo "INFO: -fedr/--fore-etcd-data-reset IS SET. Clearing data directories on nodes and forcing update of encryption-config.yaml on all nodes."
           PERFORM_ETCD_DATA_RESET=true

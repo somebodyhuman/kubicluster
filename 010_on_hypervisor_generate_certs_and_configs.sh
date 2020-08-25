@@ -227,7 +227,7 @@ case "${SUB_CMD}" in
   help)
     echo -e "\nDefault usage:\nkubicluster cnc [OPTIONAL_ARGUMENTS]\n\t This executes all subcommands in order"
     echo -e "\nSub-command usage via kubicluster command:\nkubicluster cnc [generate_ca|generate_encryption_configs|generate_certs (NAME|CN)=(CLUSTERNAME|O)(@HOSTNAME(S))|generate_configs|for_system_components|for_worker_nodes]} [OPTIONAL_ARGUMENTS]"
-    echo -e "\nDirect sub-command sage:\n$0  [generate_ca|generate_encryption_configs|generate_certs (NAME|CN)=(CLUSTERNAME|O)(@HOSTNAME(S))|generate_configs|for_system_components|for_worker_nodes]} [OPTIONAL_ARGUMENTS]"
+    echo -e "\nDirect sub-command usage:\n$0  [generate_ca|generate_encryption_configs|generate_certs (NAME|CN)=(CLUSTERNAME|O)(@HOSTNAME(S))|generate_configs|for_system_components|for_worker_nodes]} [OPTIONAL_ARGUMENTS]"
     echo -e "\nOPTIONAL ARUGMENTS:"
     echo -e "-c kube-controller-01,192.168.122.11 -c kube-controller-02,192.168.122.12"
     echo -e "\t one or more, format always: HOSTNAME,IP\n\t if changing only certs and/or configs for the given controller nodes"

@@ -80,7 +80,7 @@ case "${SUB_CMD}" in
   help)
     echo -e "\nDefault usage:\nkubicluster prepare PATH/TO/TEMPLATE_FILE TEMPLATE_ROOT_SSH_KEY [OPTIONAL_ARGUMENTS]\n\t This executes all subcommands in order"
     echo -e "\nSub-command usage via kubicluster command:\nkubicluster prepare [install_dependencies|setup_virtualisation|set_vm_template PATH/TO/TEMPLATE_FILE TEMPLATE_ROOT_SSH_KEY|setup_kubectl] [OPTIONAL_ARGUMENTS]"
-    echo -e "\nDirect sub-command sage:\n$0 [install_dependencies|setup_virtualisation|set_vm_template PATH/TO/TEMPLATE_FILE TEMPLATE_ROOT_SSH_KEY|setup_kubectl] [OPTIONAL_ARGUMENTS]"
+    echo -e "\nDirect sub-command usage:\n$0 [install_dependencies|setup_virtualisation|set_vm_template PATH/TO/TEMPLATE_FILE TEMPLATE_ROOT_SSH_KEY|setup_kubectl] [OPTIONAL_ARGUMENTS]"
     echo -e "\nOPTIONAL ARUGMENTS:"
     echo -e "none"
     echo -e "\nOPTIONAL ENVIRONMENT VARIABLES:"

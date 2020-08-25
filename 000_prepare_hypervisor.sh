@@ -84,8 +84,8 @@ case "${SUB_CMD}" in
     echo -e "\nOPTIONAL ARUGMENTS:"
     echo -e "none"
     echo -e "\nOPTIONAL ENVIRONMENT VARIABLES:"
-    echo -e "WORKDIR=./work\t\t use a custom workdir (default is a dir called 'work' in the same directory as the kubicluster executable or $0)"
-    echo -e "KUBERNETES_VERSION=1.18.5\t\t use a custom kubernetes version on the hypervisor
+    echo -e "WORKDIR=./work\n\t use a custom workdir (default is a dir called 'work' in the same directory as the kubicluster executable or $0)"
+    echo -e "KUBERNETES_VERSION=1.18.5\n\t use a custom kubernetes version on the hypervisor"
     ;;
   *)
     install_dependencies

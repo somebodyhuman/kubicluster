@@ -4,40 +4,6 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 source ${DIR}/../utils/env-variables "$@"
 
-# REMAINING_ARGS=''
-# # CALICO_USER='calico-cni'
-# INITIAL_ETCD_CLUSTER=''
-# IGNORED_ARGS=''
-# for key in ${REMARGS_ARRAY[@]} ; do
-#   case "$key" in
-#     # -nwd=*|--node-work-dir=*)
-#     # NODE_WORK_DIR="${key#*=}"
-#     # ;;
-#     # # -u=*|--user=*)
-#     # # CALICO_USER="${key#*=}"
-#     # # ;;
-#     # -v=*|--version=*)
-#     # CALICO_VERSION="${key#*=}"
-#     # ;;
-#     # -cmu=*|--cluster-member-uri=*)
-#     # PL=',' ; if [ "${INITIAL_ETCD_CLUSTER}" = "" ]; then PL=''; fi
-#     # INITIAL_ETCD_CLUSTER="${INITIAL_ETCD_CLUSTER}${PL}${key#*=}"
-#     # ;;
-#     # -cmu=*|--cluster-member-uri=*)
-#     # cmu_name_ip=($(echo "${key#*=}" | tr "," "\n"))
-#     # PL=',' ; if [ "${INITIAL_ETCD_CLUSTER}" = "" ]; then PL=''; fi
-#     # INITIAL_ETCD_CLUSTER="${INITIAL_ETCD_CLUSTER}${PL}https://${cmu_name_ip[1]}:${ETCD_CLIENT_PORT}"
-#     ;;
-#     # -f|--force-update)
-#     # FORCE_UPDATE=true
-#     # ;;
-#     *)
-#     IGNORED_ARGS="${IGNORED_ARGS} $key"
-#     ;;
-#   esac
-# done
-# if [ "${DEBUG}" = true ]; then echo "[DEBUG]: ignored args: ${IGNORED_ARGS}" ; fi
-
 CERTS_AND_CONFIGS_DIR=${NODE_WORK_DIR}/certs_and_configs
 
 MAJOR_MINOR="$(echo ${CALICO_VERSION} | cut -d '.' -f 1).$(echo ${CALICO_VERSION} | cut -d '.' -f 2)"

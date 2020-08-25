@@ -4,32 +4,6 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 source ${DIR}/../utils/env-variables "$@"
 
-# REMAINING_ARGS=''
-# INITIAL_ETCD_CLUSTER=''
-# while [[ $# -gt 0 ]]; do
-#     key="$1"
-#     case "$key" in
-#         -nwd=*|--node-work-dir=*)
-#         NODE_WORK_DIR="${key#*=}"
-#         ;;
-#         -v=*|--version=*)
-#         CALICO_VERSION="${key#*=}"
-#         ;;
-#         -f|--force-update)
-#         FORCE_UPDATE=true
-#         ;;
-#         -cmu=*|--cluster-member-uri=*)
-#         PL=',' ; if [ "${INITIAL_ETCD_CLUSTER}" = "" ]; then PL=''; fi
-#         INITIAL_ETCD_CLUSTER="${INITIAL_ETCD_CLUSTER}${PL}${key#*=}"
-#         ;;
-#         *)
-#         REMAINING_ARGS="${REMAINING_ARGS} $key"
-#         ;;
-#     esac
-#     # Shift after checking all the cases to get the next option
-#     shift
-# done
-
 CERTS_AND_CONFIGS_DIR=${NODE_WORK_DIR}/certs_and_configs
 
 # ipt_set is an alias of xt_set (https://github.com/kubernetes/kubernetes/issues/32625), so on debian only checking for xt_set
@@ -64,19 +38,6 @@ cat <<EOF | tee /etc/sysctl.d/992-cni-calico.conf
 net.netfilter.nf_conntrack_max=1000000
 EOF
 sysctl --system
-
-# cat << EOF | tee ${CERTS_AND_CONFIGS_DIR}/calico-config.yaml
-# if [ ! -d /etc/calico ]; then mkdir -p /etc/calico; fi
-# cat << EOF | tee /etc/calico/calicoctl.cfg
-# apiVersion: projectcalico.org/v3
-# kind: CalicoAPIConfig
-# metadata:
-# spec:
-#   etcdEndpoints: ${INITIAL_ETCD_CLUSTER}
-#   etcdKeyFile: ${CERTS_AND_CONFIGS_DIR}/calico-cni-key.pem
-#   etcdCertFile: ${CERTS_AND_CONFIGS_DIR}/calico-cni.pem
-#   etcdCACertFile: ${CERTS_AND_CONFIGS_DIR}/ca.pem
-# EOF
 
 if [ ! -d /etc/cni/net.d ]; then mkdir -p /etc/cni/net.d; fi
 # TODO check mtu, default is "mtu": 1500,

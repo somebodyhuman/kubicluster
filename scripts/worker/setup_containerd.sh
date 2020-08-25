@@ -4,27 +4,6 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 source ${DIR}/../utils/env-variables "$@"
 
-# REMAINING_ARGS=''
-# while [[ $# -gt 0 ]]; do
-#     key="$1"
-#     case "$key" in
-#       -nwd=*|--node-work-dir=*)
-#         NODE_WORK_DIR="${key#*=}"
-#         ;;
-#       -v=*|--version=*)
-#         CONTAINERD_VERSION="${key#*=}"
-#         ;;
-#       -f|--force-update)
-#         FORCE_UPDATE=true
-#         ;;
-#       *)
-#         REMAINING_ARGS="${REMAINING_ARGS} $key"
-#         ;;
-#     esac
-#     # Shift after checking all the cases to get the next option
-#     shift
-# done
-
 CNI_PLUGINS_DIR=${NODE_WORK_DIR}/cni-plugins-${CNI_PLUGINS_VERSION}
 CONTAINERD_DIR=${NODE_WORK_DIR}/containerd-${CONTAINERD_VERSION}
 

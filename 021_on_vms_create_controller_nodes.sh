@@ -102,7 +102,7 @@ function install_etcd() {
   done
 }
 
-function install_kubernetes_controller() {
+function install_kubernetes_controllers() {
   for node in ${CONTROLLERS}; do
     name_ip=($(echo $node | tr "," "\n"))
     # TODO can be derived from -c instead of using -cmu
@@ -133,14 +133,14 @@ case "${SUB_CMD}" in
     # TODO check for essential args and exit if not specified
     install_etcd
     ;;
-  install_kubernetes_controller)
+  install_kubernetes_controllers)
     # TODO check for essential args and exit if not specified
-    install_kubernetes_controller
+    install_kubernetes_controllers
     ;;
   help)
     echo -e "\nDefault usage:\nkubicluster create-controllers [OPTIONAL_ARGUMENTS]\n\t This executes all subcommands in order"
-    echo -e "\nSub-command usage via kubicluster command:\nkubicluster create-controllers [update_scripts_in_nodes|update_certs|update_configs|install_etcd|install_kubernetes_controller] [OPTIONAL_ARGUMENTS]"
-    echo -e "\nDirect sub-command usage:\n$0 [update_scripts_in_nodes|update_certs|update_configs|install_etcd|install_kubernetes_controller] [OPTIONAL_ARGUMENTS]"
+    echo -e "\nSub-command usage via kubicluster command:\nkubicluster create-controllers [update_scripts_in_nodes|update_certs|update_configs|install_etcd|install_kubernetes_controllers] [OPTIONAL_ARGUMENTS]"
+    echo -e "\nDirect sub-command usage:\n$0 [update_scripts_in_nodes|update_certs|update_configs|install_etcd|install_kubernetes_controllers] [OPTIONAL_ARGUMENTS]"
     echo -e "\nOPTIONAL ARUGMENTS:"
     echo -e "-c kube-controller-01,192.168.122.11 -c kube-controller-02,192.168.122.12"
     echo -e "\t the affected controllers, provide one or more, format always: HOSTNAME,IP"
@@ -164,6 +164,6 @@ case "${SUB_CMD}" in
     update_certs ca kubernetes service-accounts calico-cni
     update_configs admin.kubeconfig kube-controller-manager.kubeconfig kube-scheduler.kubeconfig encryption-config.yaml
     install_etcd
-    install_kubernetes_controller
+    install_kubernetes_controllers
     ;;
 esac

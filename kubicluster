@@ -1,0 +1,40 @@
+#!/bin/bash
+
+THE_DIR="$( cd "$( readlink $( dirname "${BASH_SOURCE[0]}" ) )" >/dev/null 2>&1 && pwd )"
+
+case "$1" in
+  prepare)
+    ${THE_DIR}/000_prepare_hypervisor.sh "${@:2}"
+    ;;
+  cnc)
+    ${THE_DIR}/010_on_hypervisor_generate_certs_and_configs.sh "${@:2}"
+    ;;
+  create-vms)
+    ${THE_DIR}/011_on_hypervisor_create_vms.sh "${@:2}"
+    ;;
+  create-controllers)
+    ${THE_DIR}/021_on_vms_create_controller_nodes.sh "${@:2}"
+    ;;
+  create-workers)
+    ${THE_DIR}/032_on_vms_create_worker_nodes.sh "${@:2}"
+    ;;
+  version)
+    echo "1.0.0"
+    ;;
+  help)
+    # TODO improve documentation
+    echo "General Usage: $0 COMMAND [SUB_COMMAND] MANDATORY_ARGUMENTS [OPTIONAL_ARGUMENTS]"
+    echo "Possible commands: prepare, cnc, create-vms, create-controllers, create-workers"
+    echo "For details about command usage run: $0 COMMAND help"
+    ;;
+  *)
+    echo "Unknown command: valid commands are:"
+    echo "$0 help"
+    echo "$0 version"
+    echo "$0 prepare"
+    echo "$0 cnc"
+    echo "$0 create-vms"
+    echo "$0 create-controllers"
+    echo "$0 create-workers"
+    echo "For details about command usage run: $0 COMMAND help"
+esac

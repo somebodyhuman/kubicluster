@@ -169,7 +169,7 @@ else
 fi
 
 REMARGS_ARRAY=($(echo ${REMAINING_ARGS} | tr " " "\n"))
-echo "REMAINING ${REMAINING_ARGS}"
+echo "all remaining arguments: ${REMAINING_ARGS}"
 SUB_CMD=${REMARGS_ARRAY[0]}
 RARGS_ARRAY=${REMARGS_ARRAY[@]:1}
 echo "sub command (or first remaining argument): ${SUB_CMD}"
@@ -185,7 +185,7 @@ fi
 echo "all arguments (without sub command): ${NODE_ARGS}"
 #
 ALL_ARGS=
-echo "DEBUG: ${DEBUG}"
+echo -e "\nDEBUG: ${DEBUG}"
 if [ "${DEBUG}" = true ]; then
   # TODO put defaults in to variables prefixed with DEFAULT_
   echo "[DEBUG]: tool versions"

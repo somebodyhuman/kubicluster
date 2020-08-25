@@ -81,11 +81,6 @@ while [[ $# -gt 0 ]]; do
       FORCE_ETCD_DATA_RESET=true
       ;;
 # --- 032
-      ## kubernetes worker
-      -u=*|--user=*)
-      CALICO_USER="${key#*=}"
-      ;;
-      ## general
 # --- ALL
       -f|--force-update)
       FORCE_UPDATE=true
@@ -130,8 +125,14 @@ while [[ $# -gt 0 ]]; do
       -kv=*|--kubernetes-version=*)
       KUBERNETES_VERSION="${key#*=}"
       ;;
+      -cnipv=*|--cni-plugins-version=*)
+      CNI_PLUGINS_VERSION="${key#*=}"
+      ;;
       -calicov=*|--calico-version=*)
       CALICO_VERSION="${key#*=}"
+      ;;
+      -cidr=*|--cluster-cidr=*)
+      CLUSTER_CIDR="${key#*=}"
       ;;
       *)
       PL=' ' ; if [ "${REMAINING_ARGS}" = "" ]; then PL=''; fi

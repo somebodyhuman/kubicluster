@@ -88,13 +88,6 @@ function update_configs() {
 }
 
 function install_etcd() {
-  # PARAMS=''
-  # if [ "${ETCD_PEER_PORT}" != "2380" ]; then PARAMS="${PARAMS} -pp=${ETCD_PEER_PORT}"; fi
-  # if [ "${ETCD_CLIENT_PORT}" != "2379" ]; then PARAMS="${PARAMS} -cp=${ETCD_CLIENT_PORT}"; fi
-  # if [ "${ETCD_CLUSTER_TOKEN}" != "" ]; then PARAMS="${PARAMS} -t=${ETCD_CLUSTER_TOKEN}"; fi
-  # if [ "${ETCD_VERSION}" != "" ]; then PARAMS="${PARAMS} -ev=${ETCD_VERSION}"; fi
-  # if [ "${FORCE_UPDATE}" = true ]; then PARAMS="${PARAMS} -f"; fi
-
   for node in ${CONTROLLERS}; do
     name_ip=($(echo $node | tr "," "\n"))
     CLUSTER_MEMBERS=''
@@ -104,18 +97,12 @@ function install_etcd() {
       fi
     done
 
-    # ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/controller/setup_etcd.sh -nwd=${NODE_WORK_DIR} -ip=${name_ip[1]} ${CLUSTER_MEMBERS}${PARAMS}"
     if [ "${DEBUG}" = true ]; then echo "[DEBUG]: calling: ${SSH_CMD} root@${name_ip[1]} ${NODE_SCRIPTS_DIR}/controller/setup_etcd.sh $@ -ip=${name_ip[1]} ${CLUSTER_MEMBERS} ${NODE_ARGS}" ; fi
     ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/controller/setup_etcd.sh $@ -ip=${name_ip[1]} ${CLUSTER_MEMBERS} ${NODE_ARGS}"
   done
 }
 
 function install_kubernetes_controller() {
-  # PARAMS=''
-  # if [ "${ETCD_CLIENT_PORT}" != "2379" ]; then PARAMS="${PARAMS} -cp=${ETCD_CLIENT_PORT}"; fi
-  # if [ "${CLUSTER_NAME}" != "kubicluster" ]; then PARAMS="${PARAMS} -cl=${CLUSTER_NAME}"; fi
-  # if [ "${FORCE_UPDATE}" = true ]; then PARAMS="${PARAMS} -f"; fi
-
   for node in ${CONTROLLERS}; do
     name_ip=($(echo $node | tr "," "\n"))
     # TODO can be derived from -c instead of using -cmu
@@ -151,8 +138,25 @@ case "${SUB_CMD}" in
     install_kubernetes_controller
     ;;
   help)
-    # TODO improve documentation
-    echo "Usage: $0 {[WORKDIR='./work'] [update_scripts_in_node|update_certs|update_configs|install_etcd|install_kubernetes_controller]}"
+    echo -e "\nDefault usage:\nkubicluster create-controllers [OPTIONAL_ARGUMENTS]\n\t This executes all subcommands in order"
+    echo -e "\nSub-command usage via kubicluster command:\nkubicluster create-controllers [update_scripts_in_nodes|update_certs|update_configs|install_etcd|install_kubernetes_controller] [OPTIONAL_ARGUMENTS]"
+    echo -e "\nDirect sub-command usage:\n$0 [update_scripts_in_nodes|update_certs|update_configs|install_etcd|install_kubernetes_controller] [OPTIONAL_ARGUMENTS]"
+    echo -e "\nOPTIONAL ARUGMENTS:"
+    echo -e "-c kube-controller-01,192.168.122.11 -c kube-controller-02,192.168.122.12"
+    echo -e "\t the affected controllers, provide one or more, format always: HOSTNAME,IP"
+    echo -e "\t (long: --controller-node kube-controller-01,192.168.122.11 -controller-node kube-controller-02,192.168.122.12)\n"
+    echo -e "-f|--force-update\n\t force update, caution this updates every file affected by the run command/sub-command"
+    echo -e "-d|--debug\n\t show debug messages"
+    echo -e "-t=etcd-kubicluster|--cluster-token=etcd-kubicluster\n\t defines a custom etcd-cluster-token to be used on all controllers listed with -c"
+    echo -e "-fedr|--force-etcd-data-reset\n\t if provided, it will enforce resetting all etcd data, USE WITH CAUTION on an already running cluster\n\t can be helpful in cases of changes in the etcd data encryption"
+    echo -e "-pp=2380|--peer-port=2380\n\t custom etcd peer port,\n\t used by etcd instances to communicate with each other,\n\t should not be changed unless you have a pretty good reason to do so"
+    echo -e "-cp=2379|--client-port=2379\n\t custom etcd client port,\n\t should not be changed unless you have a pretty good reason to do so"
+    echo -e "-ev=3.4.10|--etcd-version=3.4.10\n\t custom etcd version to be installed, configured and run\n\t must be the same on all controllers(/ etcd-nodes if etcd is running outside the controllers as a separate cluster)"
+    echo -e "-kv=1.18.5|--kubernetes-version=1.18.5\n\t custom kubernetes version used on controller nodes,\n\t should ideally be the same on hypervisor on all nodes (controllers and workers)"
+
+    echo -e "\nOPTIONAL ENVIRONMENT VARIABLES (=default_value):"
+    echo -e "WORKDIR=./work\n\t use a custom workdir on the HYPERVISOR (default is a dir called 'work' in the same directory as the kubicluster executable or $0)"
+    # TODO add less commonly changed env variables from ./utils/env-variables
     ;;
   *)
     update_scripts_in_nodes

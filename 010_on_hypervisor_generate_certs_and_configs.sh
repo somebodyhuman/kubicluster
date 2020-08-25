@@ -233,8 +233,8 @@ case "${SUB_CMD}" in
     echo -e "\t one or more, format always: HOSTNAME,IP\n\t if changing only certs and/or configs for the given controller nodes"
     echo -e "\t provide all controllers, if changing certs and/or configs for a worker node"
     echo -e "-w kube-worker-0001,192.168.122.21 -w kube-worker-0002,192.168.122.22\n\t one or more, format always: HOSTNAME,IP"
-    echo -e "-f\n\t force update, caution this updates every file affected by the run command/sub-command"
-    echo -e "-d\n\t show debug messages"
+    echo -e "-f|--force-update\n\t force update, caution this updates every file affected by the run command/sub-command"
+    echo -e "-d|--debug\n\t show debug messages"
 
     echo -e "\nOPTIONAL ENVIRONMENT VARIABLES (=default_value):"
     echo -e "WORKDIR=./work\n\t use a custom workdir on the HYPERVISOR (default is a dir called 'work' in the same directory as the kubicluster executable or $0)"

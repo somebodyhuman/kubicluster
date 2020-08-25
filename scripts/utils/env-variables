@@ -81,10 +81,6 @@ while [[ $# -gt 0 ]]; do
       FORCE_ETCD_DATA_RESET=true
       ;;
 # --- 032
-      ## runc
-      -rv=*|--runc-version=*)
-      RUNC_VERSION="${key#*=}"
-      ;;
       ## kubernetes worker
       -u=*|--user=*)
       CALICO_USER="${key#*=}"

@@ -156,7 +156,7 @@ case "${SUB_CMD}" in
 
     echo -e "\nOPTIONAL ENVIRONMENT VARIABLES (=default_value):"
     echo -e "WORKDIR=./work\n\t use a custom workdir on the HYPERVISOR (default is a dir called 'work' in the same directory as the kubicluster executable or $0)"
-    # TODO add less commonly changed env variables from ./utils/env-variables
+    # TODO add less commonly changed env variables from ./utils/env-variables (and make them configurable)
     ;;
   *)
     update_scripts_in_nodes

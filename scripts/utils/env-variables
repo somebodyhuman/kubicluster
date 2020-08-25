@@ -61,14 +61,6 @@ CONTROLLERS='' ; WORKERS=''
 while [[ $# -gt 0 ]]; do
     key="$1"
     case "$key" in
-# --- 010
-      ## general
-      # -cip=*|--controller-ip=*)
-      # CONTROLLER_IP="${key#*=}"
-      # ;;
-      # -chn=*|--controller-hostname=*)
-      # CONTROLLER_HOSTNAME="${key#*=}"
-      # ;;
 # --- 011 general
       -c=*|--cpus=*)
       VCPUS="${key#*=}"
@@ -242,7 +234,6 @@ if [ "${DEBUG}" = true ]; then
   if [ "${QEMU_TYPE}" != "qcow2" ];                           then echo "[DEBUG]: QEMU_TYPE=${QEMU_TYPE} (default: qcow2)"; fi
   if [ "${VIRT_STORAGE_DIR}" != "/var/lib/libvirt/images" ];  then echo "[DEBUG]: VIRT_STORAGE_DIR=${VIRT_STORAGE_DIR} (default: /var/lib/libvirt/images)"; fi
 
-  # if [ "${HN_ARG}" != "" ]; then echo "[DEBUG]: HN_ARG=${HN_ARG}"; fi
   echo "[DEBUG]: ---"
   echo "[DEBUG]: values of optional arguments (used on hypervisor and on nodes)"
   if [ "${CLUSTER_NAME}" != "kubicluster" ];  then echo "[DEBUG]: CLUSTER_NAME=${CLUSTER_NAME} (default: kubicluster)"; fi

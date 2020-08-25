@@ -244,8 +244,6 @@ case "${SUB_CMD}" in
     # TODO add less commonly changed env variables from ./utils/env-variables
     ;;
   *)
-    # TODO check for -cip/--controller-ip and exit if not specified
-    # TODO check for -n/--node and exit if not specified
     setup_cfssl
     generate_ca
     generate_encryption_configs encryption-config

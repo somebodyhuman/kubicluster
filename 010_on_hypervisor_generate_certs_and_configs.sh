@@ -230,17 +230,17 @@ case "${SUB_CMD}" in
     echo -e "\nDirect sub-command sage:\n$0  [generate_ca|generate_encryption_configs|generate_certs (NAME|CN)=(CLUSTERNAME|O)(@HOSTNAME(S))|generate_configs|for_system_components|for_worker_nodes]} [OPTIONAL_ARGUMENTS]"
     echo -e "\nOPTIONAL ARUGMENTS:"
     echo -e "-c kube-controller-01,192.168.122.11 -c kube-controller-02,192.168.122.12"
-    echo -e "\tone or more (format always HOSTNAME,IP), if changing only certs and/or configs for the given controller nodes"
-    echo -e "\tprovide all controllers, if changing certs and/or configs for a worker node"
-    echo -e "-w kube-worker-0001,192.168.122.21 -w kube-worker-0002,192.168.122.22 (one or more, format always: HOSTNAME,IP)"
-    echo -e "-f force update (caution this updates every file affected by the run command/sub-command)"
-    echo -e "-d show debug messages"
+    echo -e "\t one or more, format always: HOSTNAME,IP\n\t if changing only certs and/or configs for the given controller nodes"
+    echo -e "\t provide all controllers, if changing certs and/or configs for a worker node"
+    echo -e "-w kube-worker-0001,192.168.122.21 -w kube-worker-0002,192.168.122.22\n\t one or more, format always: HOSTNAME,IP"
+    echo -e "-f\n\t force update, caution this updates every file affected by the run command/sub-command"
+    echo -e "-d\n\t show debug messages"
 
     echo -e "\nOPTIONAL ENVIRONMENT VARIABLES (=default_value):"
-    echo -e "WORKDIR=./work\t\t use a custom workdir on the HYPERVISOR (default is a dir called 'work' in the same directory as the kubicluster executable or $0)"
-    echo -e "KUBERNETES_VERSION=1.18.5\t\t use a custom kubernetes version on the hypervisor (needs to be installed before by running kubicluster prepare with this argument set to the same value)"
-    echo -e "CFSSL_VERSION=1.2\t\t use a custom cfssl version on the hypervisor (will be installed automatically into ./work/tools)"
-    echo -e "CERT_HOSTNAME=127.0.0.1,localhost,10.32.0.1,kubernetes.default[,CONTROLLER_IPS,CONTROLLER_HOSTNAMES]\t\t use a custom cert hostname string for generation of the 'kubernetes' certificate"
+    echo -e "WORKDIR=./work\n\t use a custom workdir on the HYPERVISOR (default is a dir called 'work' in the same directory as the kubicluster executable or $0)"
+    echo -e "KUBERNETES_VERSION=1.18.5\n\t use a custom kubernetes version on the hypervisor (needs to be installed before by running kubicluster prepare with this argument set to the same value)"
+    echo -e "CFSSL_VERSION=1.2\n\t use a custom cfssl version on the hypervisor (will be installed automatically into ./work/tools)"
+    echo -e "CERT_HOSTNAME=127.0.0.1,localhost,10.32.0.1,kubernetes.default[,CONTROLLER_IPS,CONTROLLER_HOSTNAMES]\n\t use a custom cert hostname string for generation of the 'kubernetes' certificate"
     # TODO add less commonly changed env variables from ./utils/env-variables
     ;;
   *)

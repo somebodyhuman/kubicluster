@@ -49,11 +49,6 @@ function install_kata() {
 }
 
 function install_runc() {
-  # PARAMS=''
-  # if [ "${FORCE_UPDATE}" = true ]; then PARAMS="${PARAMS} -f"; fi
-  # CONTROLLER_PARAMS="${PARAMS}"
-  # if [ "${RUNC_VERSION}" != "1.3.6" ]; then PARAMS="${PARAMS} -v=${RUNC_VERSION}"; fi
-
   for node in ${WORKERS}; do
     name_ip=($(echo $node | tr "," "\n"))
 
@@ -74,10 +69,6 @@ function install_runc() {
 }
 
 function install_containerd() {
-  # PARAMS=''
-  # if [ "${CONTAINERD_VERSION}" != "1.3.6" ]; then PARAMS="${PARAMS} -v=${CONTAINERD_VERSION}"; fi
-  # if [ "${FORCE_UPDATE}" = true ]; then PARAMS="${PARAMS} -f"; fi
-
   for node in ${WORKERS}; do
     name_ip=($(echo $node | tr "," "\n"))
 
@@ -85,11 +76,7 @@ function install_containerd() {
   done
 }
 
-function install_kubernetes_worker() {
-  # PARAMS=''
-  # if [ "${KUBERNETES_VERSION}" != "1.18.5" ]; then PARAMS="${PARAMS} -v=${KUBERNETES_VERSION}"; fi
-  # if [ "${FORCE_UPDATE}" = true ]; then PARAMS="${PARAMS} -f"; fi
-
+function install_kubernetes_workers() {
   for node in ${WORKERS}; do
     name_ip=($(echo $node | tr "," "\n"))
 
@@ -98,21 +85,6 @@ function install_kubernetes_worker() {
 }
 
 function install_cni_calico() {
-  # PARAMS=''
-  # if [ "${FORCE_UPDATE}" = true ]; then PARAMS="${PARAMS} -f"; fi
-  # CONTROLLER_PARAMS="${PARAMS}"
-  # # if [ "${CALICO_USER}" != "calico-cni" ]; then CONTROLLER_PARAMS="${CONTROLLER_PARAMS} -u=${CALICO_USER}"; fi
-  # if [ "${KUBERNETES_VERSION}" != "1.18.5" ]; then CONTROLLER_PARAMS="${CONTROLLER_PARAMS} -v=${KUBERNETES_VERSION}"; fi
-  #
-  # if [ "${CALICO_VERSION}" != "calico-cni" ]; then PARAMS="${PARAMS} -v=${CALICO_VERSION}"; fi
-
-  # # TODO can be derived from -c instead of using -cmu
-  # ETCD_CLUSTER_MEMBERS=''
-  # for cmu in ${CONTROLLERS}; do
-  #   # cmu_name_ip=($(echo $cmu | tr "," "\n"))
-  #   ETCD_CLUSTER_MEMBERS="$ETCD_CLUSTER_MEMBERS -cmu=${cmu}"
-  # done
-
   for node in ${WORKERS}; do
     name_ip=($(echo $node | tr "," "\n"))
 
@@ -142,7 +114,6 @@ case "${SUB_CMD}" in
     update_certs "${RARGS_ARRAY[@]}"
     ;;
   update_configs)
-    # TODO check for -cip/--controller-ip and exit if not specified
     update_configs "${RARGS_ARRAY[@]}"
     ;;
   install_kata)
@@ -154,25 +125,46 @@ case "${SUB_CMD}" in
   install_containerd)
     install_containerd
     ;;
-  install_kubernetes_worker)
-    install_kubernetes_worker
+  install_kubernetes_workers)
+    install_kubernetes_workers
     ;;
   install_cni_calico)
     install_cni_calico
     ;;
   help)
-    # TODO improve documentation
-    echo "Usage: $0 {[WORKDIR='./work'] [update_scripts_in_node|update_certs|update_configs|install_kata|install_containerd|install_kubernetes_worker]}"
+    echo -e "\nDefault usage:\nkubicluster create-workers [OPTIONAL_ARGUMENTS]\n\t This executes all subcommands in order"
+    echo -e "\nSub-command usage via kubicluster command:\nkubicluster create-workers [update_scripts_in_nodes|update_certs|update_configs|install_kata|install_runc|isntall_containerd|install_kubernetes_workers|install_cni_calico] [OPTIONAL_ARGUMENTS]"
+    echo -e "\nDirect sub-command usage:\n$0 [update_scripts_in_nodes|update_certs|update_configs|install_kata|install_runc|isntall_containerd|install_kubernetes_workers|install_cni_calico] [OPTIONAL_ARGUMENTS]"
+    echo -e "\nOPTIONAL ARUGMENTS:"
+    echo -e "-c kube-controller-01,192.168.122.11 -c kube-controller-02,192.168.122.12"
+    echo -e "\t the controllers currently running the cluster, provide all, format always: HOSTNAME,IP"
+    echo -e "\t (long: --controller-node kube-controller-01,192.168.122.11 -controller-node kube-controller-02,192.168.122.12)\n"
+    echo -e "-w kube-worker-0001,192.168.122.21 -w kube-worker-0002,192.168.122.22"
+    echo -e "\t the worker nodes to be added or updated, provide one ore more, format always: HOSTNAME,IP"
+    echo -e "\t (long: --worker-node kube-controller-01,192.168.122.21 -worker-node kube-controller-02,192.168.122.22)\n"
+    echo -e "-f|--force-update\n\t force update, caution this updates every file affected by the run command/sub-command"
+    echo -e "-d|--debug\n\t show debug messages"
+    #echo -e "-cp=2379|--client-port=2379\n\t custom etcd client port,\n\t should not be changed unless you have a pretty good reason to do so"
+    echo -e "-kv=1.18.5|--kubernetes-version=1.18.5\n\t custom kubernetes version used on controller nodes,\n\t should ideally be the same on hypervisor on all nodes (controllers and workers)"
+    echo -e "-cdv=1.3.6|--containerd-version=1.3.6\n\t custom containerd version used on worker nodes,\n\t should ideally be the same on all worker nodes"
+    echo -e "-katav=1.11.2|--kata-version=1.11.2\n\t custom kata version used on worker nodes,\n\t should ideally be the same on all worker nodes"
+    echo -e "-runcv=1.0.0-rc91|--runc-version=1.0.0-rc91\n\t custom runc version used on worker nodes,\n\t should ideally be the same on all worker nodes"
+    echo -e "-cnipv=0.8.6|--cni-plugins-version=0.8.6\n\t custom cni plguins version used on worker nodes,\n\t should ideally be the same on all worker nodes"
+    echo -e "-calicov=3.11.3|--calico-version=3.11.3\n\t custom calico version used on worker nodes,\n\t should ideally be the same on all worker nodes"
+    echo -e "-cidr=10.200.0.0/16|--cluster-cidr=10.200.0.0/16\n\t custom cluster cidr (cluster ip range in CIDR notation),\n\t each pod will automatically be assigned an IP within the cluster IP range"
+
+    echo -e "\nOPTIONAL ENVIRONMENT VARIABLES (=default_value):"
+    echo -e "WORKDIR=./work\n\t use a custom workdir on the HYPERVISOR (default is a dir called 'work' in the same directory as the kubicluster executable or $0)"
+    # TODO add less commonly changed env variables from ./utils/env-variables (and make them configurable)
     ;;
   *)
     update_scripts_in_nodes
-    # TODO check for -cip/--controller-ip and exit if not specified
     update_certs ca calico-cni calico-cni-key
     update_configs kube-proxy.kubeconfig calico-cni.kubeconfig
     install_kata
     install_runc
     install_containerd
-    install_kubernetes_worker
+    install_kubernetes_workers
     install_cni_calico
     ;;
 esac

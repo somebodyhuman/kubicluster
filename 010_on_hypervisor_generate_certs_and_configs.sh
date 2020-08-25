@@ -118,20 +118,20 @@ function generate_configs() {
     if [ "${NAME}" = "kube-proxy" ] || [ "${NAME}" = "calico-cni" ] ; then SERVER_IP=${CONTROLLER_LB_IP}; fi
     if [ ! -e ${config_file} ] || [ "${FORCE_UPDATE}" = true ]; then
       echo "generating config for ${NAME} into ${NAME}.kubeconfig"
-      kubectl config set-cluster ${CLUSTER_NAME} --server=https://${SERVER_IP}:6443 \
+      ${KUBECTL_CMD_ON_HYPERVISOR} config set-cluster ${CLUSTER_NAME} --server=https://${SERVER_IP}:6443 \
         --certificate-authority=${CA_PUB} \
         --embed-certs=true --kubeconfig=${config_file}
 
-      kubectl config set-credentials ${entity} \
+      ${KUBECTL_CMD_ON_HYPERVISOR} config set-credentials ${entity} \
         --client-certificate=${CERTS_AND_CONFIGS_DIR}/${NAME}.pem \
         --client-key=${CERTS_AND_CONFIGS_DIR}/${NAME}-key.pem \
         --embed-certs=true --kubeconfig=${config_file}
 
-      kubectl config set-context default --cluster=${CLUSTER_NAME} \
+      ${KUBECTL_CMD_ON_HYPERVISOR} config set-context default --cluster=${CLUSTER_NAME} \
         --user=${entity} \
         --kubeconfig=${config_file}
 
-      kubectl config use-context default --kubeconfig=${config_file}
+      ${KUBECTL_CMD_ON_HYPERVISOR} config use-context default --kubeconfig=${config_file}
     else
       echo "kubconfig for ${entity} exists already"
     fi
@@ -171,20 +171,20 @@ EOF
     config_file=${CERTS_AND_CONFIGS_DIR}/${worker_name_ip[0]}.kubeconfig
     if [ ! -e ${config_file} ] || [ "${FORCE_UPDATE}" = true ]; then
       echo "(re)generating kubeconfig for ${worker_name_ip[0]}"
-      kubectl config set-cluster ${CLUSTER_NAME} --server=https://${CONTROLLER_LB_IP}:6443 \
+      ${KUBECTL_CMD_ON_HYPERVISOR} config set-cluster ${CLUSTER_NAME} --server=https://${CONTROLLER_LB_IP}:6443 \
         --certificate-authority=${CA_PUB} \
         --embed-certs=true --kubeconfig=${config_file}
 
-      kubectl config set-credentials system:node:${worker_name_ip[0]} \
+      ${KUBECTL_CMD_ON_HYPERVISOR} config set-credentials system:node:${worker_name_ip[0]} \
         --client-certificate=${CERTS_AND_CONFIGS_DIR}/${worker_name_ip[0]}.pem \
         --client-key=${CERTS_AND_CONFIGS_DIR}/${worker_name_ip[0]}-key.pem \
         --embed-certs=true --kubeconfig=${config_file}
 
-      kubectl config set-context default --cluster=${CLUSTER_NAME} \
+      ${KUBECTL_CMD_ON_HYPERVISOR} config set-context default --cluster=${CLUSTER_NAME} \
         --user=system:node:${worker_name_ip[0]} \
         --kubeconfig=${config_file}
 
-      kubectl config use-context default --kubeconfig=${config_file}
+      ${KUBECTL_CMD_ON_HYPERVISOR} config use-context default --kubeconfig=${config_file}
     else
       echo "kubconfig for ${worker_name_ip[0]} exists already"
     fi
@@ -225,10 +225,23 @@ case "${SUB_CMD}" in
     for_worker_nodes
     ;;
   help)
-    # TODO improve documentation
-    echo "Usage: $0 {[WORKDIR='./work'] [generate_ca|generate_certs (NAME|CN)=(CLUSTERNAME|O)(@HOSTNAME(S))|for_system_components (-cip=|--controller_ip=x.x.x.x)|for_worker_nodes (-cip=|--controller_ip=x.x.x.x)]}"
-    echo "A really good introduction to certificates and the csr field meanings can be found here: https://www.youtube.com/watch?v=gXz4cq3PKdg&t=539"
-    echo "Disclaimer: It is better to grant superuser/admin access through a service account authenticated by tokens, rather than through certificate authentication. For details read, e.g.: https://dev.to/danielkun/kubernetes-certificates-tokens-authentication-and-service-accounts-4fj7"
+    echo -e "\nDefault usage:\nkubicluster cnc [OPTIONAL_ARGUMENTS]\n\t This executes all subcommands in order"
+    echo -e "\nSub-command usage via kubicluster command:\nkubicluster cnc [generate_ca|generate_encryption_configs|generate_certs (NAME|CN)=(CLUSTERNAME|O)(@HOSTNAME(S))|generate_configs|for_system_components|for_worker_nodes]} [OPTIONAL_ARGUMENTS]"
+    echo -e "\nDirect sub-command sage:\n$0  [generate_ca|generate_encryption_configs|generate_certs (NAME|CN)=(CLUSTERNAME|O)(@HOSTNAME(S))|generate_configs|for_system_components|for_worker_nodes]} [OPTIONAL_ARGUMENTS]"
+    echo -e "\nOPTIONAL ARUGMENTS:"
+    echo -e "-c kube-controller-01,192.168.122.11 -c kube-controller-02,192.168.122.12"
+    echo -e "\tone or more (format always HOSTNAME,IP), if changing only certs and/or configs for the given controller nodes"
+    echo -e "\tprovide all controllers, if changing certs and/or configs for a worker node"
+    echo -e "-w kube-worker-0001,192.168.122.21 -w kube-worker-0002,192.168.122.22 (one or more, format always: HOSTNAME,IP)"
+    echo -e "-f force update (caution this updates every file affected by the run command/sub-command)"
+    echo -e "-d show debug messages"
+
+    echo -e "\nOPTIONAL ENVIRONMENT VARIABLES (=default_value):"
+    echo -e "WORKDIR=./work\t\t use a custom workdir on the HYPERVISOR (default is a dir called 'work' in the same directory as the kubicluster executable or $0)"
+    echo -e "KUBERNETES_VERSION=1.18.5\t\t use a custom kubernetes version on the hypervisor (needs to be installed before by running kubicluster prepare with this argument set to the same value)"
+    echo -e "CFSSL_VERSION=1.2\t\t use a custom cfssl version on the hypervisor (will be installed automatically into ./work/tools)"
+    echo -e "CERT_HOSTNAME=127.0.0.1,localhost,10.32.0.1,kubernetes.default[,CONTROLLER_IPS,CONTROLLER_HOSTNAMES]\t\t use a custom cert hostname string for generation of the 'kubernetes' certificate"
+    # TODO add less commonly changed env variables from ./utils/env-variables
     ;;
   *)
     # TODO check for -cip/--controller-ip and exit if not specified

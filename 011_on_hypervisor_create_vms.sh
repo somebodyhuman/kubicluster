@@ -17,13 +17,13 @@ function create_vms() {
     vm_name_ip=($(echo $vm | tr "," "\n"))
     VM_XML=${VM_CONFIGS_DIR}/${vm_name_ip[0]}.xml
     VM_FILE=${VIRT_STORAGE_DIR}/${vm_name_ip[0]}.qcow2
-    if [ ! -e ${VM_FILE} ]; then
+    if [ ! -e ${VM_FILE} ] || [ "${FORCE_UPDATE}" = true ]; then
       echo "copying template to ${VM_FILE}"
       sudo cp ${TEMPLATE_FILE} ${VM_FILE}
     else
       echo "vm storage file for ${vm_name_ip[0]} already exists (${VM_FILE})"
     fi
-    if [ ! -e ${VM_XML} ]; then
+    if [ ! -e ${VM_XML} ] || [ "${FORCE_UPDATE}" = true ]; then
       echo "generating virsh xml for ${vm_name_ip[0]}"
       cp ${TEMPLATE_XML} ${VM_XML}
       sed -i "s/#VM_NAME#/${vm_name_ip[0]}/g" ${VM_XML}
@@ -40,13 +40,15 @@ function create_vms() {
       echo "virtual machine ${vm_name_ip[0]} exists already"
     else
       sudo virsh define ${VM_XML}
+      echo "Domain ${vm_name_ip[0]} uses $(cat ${VM_XML} | grep 'source file')"
       sudo virsh start ${vm_name_ip[0]}
-
+      
       # TODO handle failure to configure template in following section better
       attempts=0
       vm_result=124
       while [[ ${attempts} -lt ${MAX_ATTEMPTS} ]]; do
         # TODO make this resumable i.e. try to connect to both template ip and target ip
+        echo "trying to set HOSTNAME to ${vm_name_ip[0]}"
         ssh_out=$(${SSH_CMD} root@${TEMPLATE_IP} "echo ${vm_name_ip[0]} >/etc/hostname")
         result=$?
         if [[ ${result} -eq 0 ]]; then
@@ -63,6 +65,7 @@ function create_vms() {
       done
       if [[ ${vm_result} -eq 124 ]]; then echo "ssh connection problem or hostname configuration problem while configuring ${vm_name_ip[0]}." ; exit ${vm_result} ; fi
 
+      echo "trying to set IP to ${vm_name_ip[1]}"
       IP_RESULT=$(${SSH_CMD} root@${TEMPLATE_IP} "sed -i 's/${TEMPLATE_IP}/${vm_name_ip[1]}/g' /etc/network/interfaces")
       if [ "$(echo ${IP_RESULT})" != "" ]; then echo "problem while configuring ip address for ${vm_name_ip[0]}." ; exit ${vm_result} ; fi
       ${SSH_CMD} root@${TEMPLATE_IP} "reboot -h now"

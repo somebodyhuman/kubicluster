@@ -2,8 +2,6 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-source ${DIR}/utils/workdir ensure_certs_and_configs_dir_exists
-
 function setup_cfssl() {
   # ensure cfssl tools exist in tools dir
   source ${DIR}/utils/workdir ensure_tools_dir_exists
@@ -192,6 +190,8 @@ EOF
 }
 
 source ${DIR}/utils/env-variables "$@"
+
+source ${DIR}/utils/workdir ensure_certs_and_configs_dir_exists
 
 # using the certificate authority to create all the needed signed certificates
 GENCERT_ARGS="-ca=${CA_PUB} -ca-key=${CA_KEY} -config=${CA_CONFIG} -profile=kubicluster"

@@ -1,9 +1,12 @@
 # kubicluster
 
-kubicluster is a bash script collection that helps you setup a kubernetes cluster inside virtual machines from scratch. It's predominant purpose is to help you to learn the ins and outs of kubernetes. Of course, it can also be used as a basis to (semi-)automate your production cluster setup.
+kubicluster is a bash script collection that helps you setup a kubernetes cluster inside virtual machines from scratch. It's predominant purpose is to help you to learn the ins and outs of kubernetes. You might also use it to use it as an inspirational basis to (semi)-automate your kubernetes cluster management.
 
-If you are looking for a more sophisticated, production-ready approach, checkout https://github.com/kubernetes-sigs/kubespray
+If you are looking for a more sophisticated, production-ready approach, checkout https://github.com/kubernetes-sigs/kubespray or use kubeadm.
 
+***DISCLAIMER: kubicluster is by all means a constant work in progress, if you have questions, suggestions, found a bug, extended it, and so on ... please contribute it as an issue and/or a PR to this repository***
+
+**Campsite principle: kubicluster is a contribution aggregating hundreds of bits and pieces of resources into a set of scripts to automate a small cluster setup. It would not have been possible to be assembled and coded without all those people contributing their bits and pieces of knowledge as open-knowledge and open-source. If you benefited from kubicluster, consider contributing a little bit to it (or to any other part of the kubernetes ecosystem), so it will be a little bit easier for the next one using it. Some inspiration for contributing to kubicluster can be found in the roadmap in this README.**
 
 ## Suported tool version combination(s)
 
@@ -28,20 +31,69 @@ Running hypervisor: QEMU 3.1.0
 
 If you would like to see other options or versions supported as well, you are welcome to open a PR.
 
-kubicluster emphasizes runtime security and workload isolation and therefore uses kata containers as the default runtime and runc as an optional on-demand runtime. calico is not yet compatible with kata containers as the underlying container runtime. Therefore kubicluster runs calico pods using runc as the low-level runtime.
+kubicluster emphasizes runtime security and workload isolation. Therefore, it uses kata containers as the default runtime and runc as an optional on-demand runtime. Calico is not yet compatible with kata containers as the underlying container runtime for the same reason, why docker host network support is not working inside kata containers (https://github.com/kata-containers/documentation/blob/master/Limitations.md#docker---nethost). Therefore kubicluster runs calico pods using runc as the low-level runtime.
 
 ## Prerequisites
 
-You should know the basics about kvm, virsh and libvirt-qemu (or any other underlying virtualisation you might want to use). You should be familiar with the command line. All scripts are written in bash to keep the entry level barrier as low as possible (picking a higher level programming makes it more difficult to clearly see how all the tools interact on the command line level and how they depend on each other, in particular ).
+You should know the basics about kvm, virsh and libvirt-qemu (or any other underlying virtualisation you might want to use). You should be familiar with the command line. All scripts are written in bash to keep the entry level barrier as low as possible (picking a higher level programming makes it more difficult to clearly see how all the tools interact on the command line level and how they depend on each other, more good arguments can be found here: https://github.com/my-own-kind/mokctl-docs/blob/master/docs/faq.md#why-bash).
 
 You should have a clean virtual machine image with a fresh, empty install of debian 9 that can be used as a template for controller nodes and worker nodes. Inside this VM the root user needs to have ssh access using a key file. This can be revoked once the kubicluster setup is completed.
 
-### Aquire basic knowledge about kubernetes
-Some good resources to learn more about kubernetes are the following:
+### Acquire basic knowledge about kubernetes
+Some good resources besides https://kubernetes.io/docs/home/ to learn more about kubernetes are listed here by topic. Take your time and invest some hours reading through them before starting with kubernetes, it will pay off.
+
+***Container Runtimes***
 * Introduction to Container Runtimes: https://medium.com/@saschagrunert/demystifying-containers-part-ii-container-runtimes-e363aa378f25
-* Backup and Recovery Strategies: https://medium.com/velotio-perspectives/the-ultimate-guide-to-disaster-recovery-for-your-kubernetes-clusters-94143fcc8c1e
+* Differentiation between high-level and low-level runtimes: https://www.ianlewis.org/en/container-runtimes-part-3-high-level-runtimes
+* Kubernetes Container Runtimes comparison: https://joejulian.name/post/kubernetes-container-engine-comparison/
+* A second overview of Container Runtimes: https://www.inovex.de/blog/containers-docker-containerd-nabla-kata-firecracker/
+* Comparison of high-level/low-level runtime combinations (including some performance parameters): https://kubedex.com/kubernetes-container-runtimes/
+* Positioning of Kata Containers relative to other runtimes: https://blogs.oracle.com/linux/kata-containers:-an-important-cloud-native-development-trend-v2
+* Run Kata Containers in Kubernetes: https://docs.starlingx.io/operations/kata_container.html
+* How to user Kata Containers and ContainerD: https://github.com/kata-containers/kata-containers/blob/2.0-dev/docs/how-to/containerd-kata.md
+* Common troubleshooting, upgrade connection: Forbidden explained: https://www.unixcloudfusion.in/2019/02/solved-error-unable-to-upgrade.html
+* kubectl - how to access the logs of Pods: https://kubectl.docs.kubernetes.io/pages/container_debugging/container_logs.html
+
+***KVM and virtualisation***
+* What is nested virtualisation and how to enable it: https://www.linuxtechi.com/enable-nested-virtualization-kvm-centos-7-rhel-7/
+* Virtual Disk Performance: https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/virtualization_tuning_and_optimization_guide/sect-virtualization_tuning_optimization_guide-virt_manager-virtual-disk_options
+* Virtual Disk Caching: https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/virtualization_tuning_and_optimization_guide/sect-Virtualization_Tuning_Optimization_Guide-BlockIO-Caching
+* Virtual Disk I/O Modes: https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/virtualization_tuning_and_optimization_guide/sect-virtualization_tuning_optimization_guide-blockio-io_mode
+
 * Kubernetes relies heavily on certificates to manage access and authentication; a really good introduction to certificates and the csr field meanings can be found here: https://www.youtube.com/watch?v=gXz4cq3PKdg&t=539
-***TODO add more helpful resources***
+
+***Kubernetes networking with Calico***
+* Kubernetes Networking guide for beginners: https://matthewpalmer.net/kubernetes-app-developer/articles/kubernetes-networking-guide-beginners.html
+* Neat definitions of terms Port, TargetPort and NodePort: https://matthewpalmer.net/kubernetes-app-developer/articles/kubernetes-ports-targetport-nodeport-service.html
+* Understanding Kubernetes networking model: https://sookocheff.com/post/kubernetes/understanding-kubernetes-networking-model/
+* Calico Introduction (video 5:40 min): https://www.youtube.com/watch?v=MIx-LgY7714
+* Configuring MTU: https://docs.projectcalico.org/networking/mtu
+
+***Kubernetes networking alternatives***
+* In depth comparison of Flannel and Calico architecture: https://medium.com/@jain.sm/flannel-vs-calico-a-battle-of-l2-vs-l3-based-networking-5a30cd0a3ebd
+* Flannel, Calico, Canal, Weave: https://rancher.com/blog/2019/2019-03-21-comparing-kubernetes-cni-providers-flannel-calico-canal-and-weave/
+* Calico, Cilium, Contiv, Flannel: https://www.objectif-libre.com/en/blog/2018/07/05/k8s-network-solutions-comparison/
+*
+https://docs.projectcalico.org/networking/mtu
+* Understanding Ingress: https://medium.com/google-cloud/understanding-kubernetes-networking-ingress-1bc341c84078
+
+***Beyond the basics***
+* Backup and Recovery Strategies: https://medium.com/velotio-perspectives/the-ultimate-guide-to-disaster-recovery-for-your-kubernetes-clusters-94143fcc8c1e
+* Pod Backups: https://theithollow.com/2019/06/03/kubernetes-pod-backups/
+* Streamlining kubernetes deployments with https://gitkube.sh/, https://draft.sh/ and https://fluxcd.io/ (Why GitOps? https://www.weave.works/technologies/gitops/)
+* Monitoring with Prometheus: https://devopscube.com/setup-prometheus-monitoring-on-kubernetes/
+* Troubleshooting etcd Nodes: https://rancher.com/docs/rancher/v2.x/en/troubleshooting/kubernetes-components/etcd/
+* Multi-cluster networking: https://itnext.io/kubernetes-multi-cluster-networking-made-simple-c8f26827813
+* Storage in Kubernetes: https://www.howtoforge.com/storage-in-kubernetes/
+* Hardening Kubernetes from Scratch: https://github.com/hardening-kubernetes/from-scratch
+* Impact of etcd deployment on Kubernetes, Istio, and application performance: https://onlinelibrary.wiley.com/doi/full/10.1002/spe.2885
+
+***Other tutorials, that might be more fitting for your future use cases***
+* https://kubernetes-tutorial.schoolofdevops.com/
+* Kubernetes the Hard Way (Original, Google Cloud Platform): https://github.com/kelseyhightower/kubernetes-the-hard-way
+* Kubernetes the Hard Way (Open Stack Edition): https://github.com/e-minguez/kubernetes-the-hard-way-openstack
+* Kubernetes the Hard Way (VirtualBox Edition): https://github.com/mmumshad/kubernetes-the-hard-way
+* My Own Kind (using Containers only, executable shell scripts that can be examined, similar to kubicluster, but with a different focus): https://github.com/my-own-kind/mokctl#kubernetes-the-hard-way---on-your-laptop
 
 ## Basic Ideas / "Features"
 
@@ -178,6 +230,7 @@ kubectl delete deployment calico-kube-controllers -n kube-system
 * support change of deployed networking solution with a single command
 * support simple removal of components (with warning if the last of it's type is removed, components: etcd server, kubernetes controller, kubernetes worker, virtual machine (including components deployed onto it))
 * support change of etcd data encryption with a single command
+* add support for firecracker and docker as runtimes
 * support addition and removal of different runtimes on different nodes
 * provide a "kubicluster status" command, that does the following:
   * listing etcd (cluster) health

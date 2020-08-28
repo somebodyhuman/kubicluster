@@ -39,6 +39,7 @@ function create_vms() {
     if [ "$(virsh list --all | grep ${vm_name_ip[0]})" != "" ]; then
       echo "virtual machine ${vm_name_ip[0]} exists already"
     else
+      # TODO undefine domain first if it exists already and -f|--force-update is set
       virsh define ${VM_XML}
       echo "Domain ${vm_name_ip[0]} uses $(cat ${VM_XML} | grep 'source file')"
       virsh start ${vm_name_ip[0]}

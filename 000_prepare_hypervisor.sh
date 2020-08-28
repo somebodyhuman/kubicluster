@@ -32,6 +32,8 @@ function setup_virtualisation() {
   done
   sysctl -p
 
+  # start vm network
+  virsh net-start default
   # enable autostart of vm network
   virsh net-autostart default
   # TODO vm network stuff: create default nw and ...

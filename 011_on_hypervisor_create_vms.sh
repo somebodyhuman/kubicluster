@@ -19,7 +19,7 @@ function create_vms() {
     VM_FILE=${VIRT_STORAGE_DIR}/${vm_name_ip[0]}.qcow2
     if [ ! -e ${VM_FILE} ] || [ "${FORCE_UPDATE}" = true ]; then
       echo "copying template to ${VM_FILE}"
-      sudo cp ${TEMPLATE_FILE} ${VM_FILE}
+      cp ${TEMPLATE_FILE} ${VM_FILE}
     else
       echo "vm storage file for ${vm_name_ip[0]} already exists (${VM_FILE})"
     fi
@@ -36,13 +36,13 @@ function create_vms() {
     else
       echo "virsh xml for ${vm_name_ip[0]} exists already"
     fi
-    if [ "$(sudo virsh list --all | grep ${vm_name_ip[0]})" != "" ]; then
+    if [ "$(virsh list --all | grep ${vm_name_ip[0]})" != "" ]; then
       echo "virtual machine ${vm_name_ip[0]} exists already"
     else
-      sudo virsh define ${VM_XML}
+      virsh define ${VM_XML}
       echo "Domain ${vm_name_ip[0]} uses $(cat ${VM_XML} | grep 'source file')"
-      sudo virsh start ${vm_name_ip[0]}
-      
+      virsh start ${vm_name_ip[0]}
+
       # TODO handle failure to configure template in following section better
       attempts=0
       vm_result=124

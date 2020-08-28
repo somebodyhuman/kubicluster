@@ -3,11 +3,18 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 function install_dependencies() {
-  apt-get install -y curl iptables-persistent ntp
+  apt-get install -y curl iptables-persistent ntp python3
 }
 
 function setup_virtualisation() {
-  apt-get install -y virsh libvirt-qemu
+  if ! grep --perl-regexp 'vmx|svm' /proc/cpuinfo; then
+    echo "hardware virtualisation is not yet enabled. Please enable it in your BIOS. exiting..."
+    exit 1
+  else
+    echo "hardware virtualisation successfully detected. continuing ..."
+  fi
+
+  apt-get install -y qemu qemu-kvm qemu-system qemu-utils libvirt-clients libvirt-daemon-system virtinst
   # enable port forwarding
   IP4="net.ipv4.ip_forward=1"
   IP6="net.ipv6.conf.all.forwarding=1"

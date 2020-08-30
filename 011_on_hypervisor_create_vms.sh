@@ -43,6 +43,7 @@ function create_vms() {
       virsh define ${VM_XML}
       echo "Domain ${vm_name_ip[0]} uses $(cat ${VM_XML} | grep 'source file')"
       virsh start ${vm_name_ip[0]}
+      virsh autostart ${vm_name_ip[0]}
 
       # TODO handle failure to configure template in following section better
       attempts=0

@@ -135,7 +135,7 @@ case "${SUB_CMD}" in
     echo -e "\nDefault usage:\nkubicluster create-workers [OPTIONAL_ARGUMENTS]\n\t This executes all subcommands in order"
     echo -e "\nSub-command usage via kubicluster command:\nkubicluster create-workers [update_scripts_in_nodes|update_certs|update_configs|install_kata|install_runc|isntall_containerd|install_kubernetes_workers|install_cni_calico] [OPTIONAL_ARGUMENTS]"
     echo -e "\nDirect sub-command usage:\n$0 [update_scripts_in_nodes|update_certs|update_configs|install_kata|install_runc|isntall_containerd|install_kubernetes_workers|install_cni_calico] [OPTIONAL_ARGUMENTS]"
-    echo -e "\nOPTIONAL ARUGMENTS:"
+    echo -e "\nOPTIONAL ARGUMENTS:"
     echo -e "-c kube-controller-01,192.168.122.11 -c kube-controller-02,192.168.122.12"
     echo -e "\t the controllers currently running the cluster, provide all, format always: HOSTNAME,IP"
     echo -e "\t (long: --controller-node kube-controller-01,192.168.122.11 -controller-node kube-controller-02,192.168.122.12)\n"

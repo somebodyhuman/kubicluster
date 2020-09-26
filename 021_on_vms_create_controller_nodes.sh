@@ -7,9 +7,9 @@ function update_scripts_in_nodes() {
   for node in ${CONTROLLERS}; do
     name_ip=($(echo $node | tr "," "\n"))
     echo "syncing scripts dir to node ${name_ip[0]}"
-    ${SSH_CMD} root@${name_ip[1]} "if [ ! -d ${NODE_SCRIPTS_DIR} ]; then mkdir -p ${NODE_SCRIPTS_DIR}; fi"
-    ${SSH_CMD} root@${name_ip[1]} "if [ ! -f /usr/bin/rsync ]; then apt-get install -y rsync; fi"
-    rsync -e "${SSH_CMD}" -av --no-owner --no-group ${SCRIPTS_DIR}/* root@${name_ip[1]}:${NODE_SCRIPTS_DIR}
+    ${SSH_CMD} root@${name_ip[2]} "if [ ! -d ${NODE_SCRIPTS_DIR} ]; then mkdir -p ${NODE_SCRIPTS_DIR}; fi"
+    ${SSH_CMD} root@${name_ip[2]} "if [ ! -f /usr/bin/rsync ]; then apt-get install -y rsync; fi"
+    rsync -e "${SSH_CMD}" -av --no-owner --no-group ${SCRIPTS_DIR}/* root@${name_ip[2]}:${NODE_SCRIPTS_DIR}
   done
 }
 
@@ -19,8 +19,8 @@ function update_certs() {
   for cert in "$@"; do CERTS="${CERTS} ${CERTS_AND_CONFIGS_DIR}/${cert}.pem ${CERTS_AND_CONFIGS_DIR}/${cert}-key.pem" ; done
   for node in ${CONTROLLERS}; do
     name_ip=($(echo $node | tr "," "\n"))
-    ${SSH_CMD} root@${name_ip[1]} "if [ ! -d ${NODE_CERTS_AND_CONFIGS_DIR} ]; then mkdir -p ${NODE_CERTS_AND_CONFIGS_DIR}; fi"
-    ${SCP_CMD} ${CERTS} root@${name_ip[1]}:${NODE_CERTS_AND_CONFIGS_DIR}
+    ${SSH_CMD} root@${name_ip[2]} "if [ ! -d ${NODE_CERTS_AND_CONFIGS_DIR} ]; then mkdir -p ${NODE_CERTS_AND_CONFIGS_DIR}; fi"
+    ${SCP_CMD} ${CERTS} root@${name_ip[2]}:${NODE_CERTS_AND_CONFIGS_DIR}
   done
 }
 
@@ -43,7 +43,7 @@ function update_configs() {
         name_ip=($(echo $node | tr "," "\n"))
         if [ -d ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]} ]; then rm -rf ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]}; fi
         mkdir -p ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]}
-        ${SCP_CMD} root@${name_ip[1]}:${NODE_CERTS_AND_CONFIGS_DIR}/${config} ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]}/${config}
+        ${SCP_CMD} root@${name_ip[2]}:${NODE_CERTS_AND_CONFIGS_DIR}/${config} ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]}/${config}
 
         if [ -e ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]}/${config} ]; then
           if ! diff ${CERTS_AND_CONFIGS_MIRROR_DIR}/${name_ip[0]}/${config} ${CERTS_AND_CONFIGS_DIR}/${config}; then
@@ -76,13 +76,13 @@ function update_configs() {
 
   for node in ${CONTROLLERS}; do
     name_ip=($(echo $node | tr "," "\n"))
-    ${SSH_CMD} root@${name_ip[1]} "if [ ! -d ${NODE_CERTS_AND_CONFIGS_DIR} ]; then mkdir -p ${NODE_CERTS_AND_CONFIGS_DIR}; fi"
+    ${SSH_CMD} root@${name_ip[2]} "if [ ! -d ${NODE_CERTS_AND_CONFIGS_DIR} ]; then mkdir -p ${NODE_CERTS_AND_CONFIGS_DIR}; fi"
     if [ "${PERFORM_ETCD_DATA_RESET}" = true ]; then
       echo "INFO: performing etcd data reset on ${name_ip[0]}"
-      ${SSH_CMD} root@${name_ip[1]} "if systemctl is-active etcd.service; then systemctl stop etcd.service; fi ; if [ -d ${ETCD_DATA_DIR} ]; then rm -rf ${ETCD_DATA_DIR}; fi"
+      ${SSH_CMD} root@${name_ip[2]} "if systemctl is-active etcd.service; then systemctl stop etcd.service; fi ; if [ -d ${ETCD_DATA_DIR} ]; then rm -rf ${ETCD_DATA_DIR}; fi"
     fi
     if [ "${CONFIGS}" != "" ]; then
-      ${SCP_CMD} ${CONFIGS} root@${name_ip[1]}:${NODE_CERTS_AND_CONFIGS_DIR}
+      ${SCP_CMD} ${CONFIGS} root@${name_ip[2]}:${NODE_CERTS_AND_CONFIGS_DIR}
     fi
   done
 }
@@ -97,8 +97,8 @@ function install_etcd() {
       fi
     done
 
-    if [ "${DEBUG}" = true ]; then echo "[DEBUG]: calling: ${SSH_CMD} root@${name_ip[1]} ${NODE_SCRIPTS_DIR}/controller/setup_etcd.sh $@ -ip=${name_ip[1]} ${CLUSTER_MEMBERS} ${NODE_ARGS}" ; fi
-    ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/controller/setup_etcd.sh $@ -ip=${name_ip[1]} ${CLUSTER_MEMBERS} ${NODE_ARGS}"
+    if [ "${DEBUG}" = true ]; then echo "[DEBUG]: calling: ${SSH_CMD} root@${name_ip[2]} ${NODE_SCRIPTS_DIR}/controller/setup_etcd.sh $@ -ip=${name_ip[1]} ${CLUSTER_MEMBERS} ${NODE_ARGS}" ; fi
+    ${SSH_CMD} root@${name_ip[2]} "${NODE_SCRIPTS_DIR}/controller/setup_etcd.sh $@ -ip=${name_ip[1]} ${CLUSTER_MEMBERS} ${NODE_ARGS}"
   done
 }
 
@@ -111,8 +111,8 @@ function install_kubernetes_controllers() {
         ETCD_CLUSTER_MEMBERS="${ETCD_CLUSTER_MEMBERS} -cmu=${cmu}"
     done
 
-    if [ "${DEBUG}" = true ]; then echo "[DEBUG]: calling: ${SSH_CMD} root@${name_ip[1]} ${NODE_SCRIPTS_DIR}/controller/setup_kubernetes_controller.sh -ip=${name_ip[1]} ${ETCD_CLUSTER_MEMBERS} ${NODE_ARGS}" ; fi
-    ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/controller/setup_kubernetes_controller.sh -ip=${name_ip[1]} ${ETCD_CLUSTER_MEMBERS} ${NODE_ARGS}"
+    if [ "${DEBUG}" = true ]; then echo "[DEBUG]: calling: ${SSH_CMD} root@${name_ip[2]} ${NODE_SCRIPTS_DIR}/controller/setup_kubernetes_controller.sh -ip=${name_ip[1]} ${ETCD_CLUSTER_MEMBERS} ${NODE_ARGS}" ; fi
+    ${SSH_CMD} root@${name_ip[2]} "${NODE_SCRIPTS_DIR}/controller/setup_kubernetes_controller.sh -ip=${name_ip[1]} ${ETCD_CLUSTER_MEMBERS} ${NODE_ARGS}"
   done
 }
 

@@ -7,10 +7,10 @@ function update_scripts_in_nodes() {
   for node in ${WORKERS}; do
     name_ip=($(echo $node | tr "," "\n"))
     echo "syncing scripts dir to node ${name_ip[0]}"
-    ${SSH_CMD} root@${name_ip[1]} "if [ ! -d ${NODE_SCRIPTS_DIR} ]; then mkdir -p ${NODE_SCRIPTS_DIR}; fi"
-    ${SSH_CMD} root@${name_ip[1]} "if [ ! -f /usr/bin/rsync ]; then apt-get install -y rsync; fi"
+    ${SSH_CMD} root@${name_ip[2]} "if [ ! -d ${NODE_SCRIPTS_DIR} ]; then mkdir -p ${NODE_SCRIPTS_DIR}; fi"
+    ${SSH_CMD} root@${name_ip[2]} "if [ ! -f /usr/bin/rsync ]; then apt-get install -y rsync; fi"
     echo ${RSYNC_CMD}
-    rsync -e "${SSH_CMD}" -av --no-owner --no-group ${SCRIPTS_DIR}/* root@${name_ip[1]}:${NODE_SCRIPTS_DIR}
+    rsync -e "${SSH_CMD}" -av --no-owner --no-group ${SCRIPTS_DIR}/* root@${name_ip[2]}:${NODE_SCRIPTS_DIR}
   done
 }
 
@@ -22,8 +22,8 @@ function update_certs() {
     for cert in "$@"; do CERTS="${CERTS} ${CERTS_AND_CONFIGS_DIR}/${cert}.pem" ; done
     echo "updating certs: ${name_ip[0]} $@"
 
-    ${SSH_CMD} root@${name_ip[1]} "if [ ! -d ${NODE_CERTS_AND_CONFIGS_DIR} ]; then mkdir -p ${NODE_CERTS_AND_CONFIGS_DIR}; fi"
-    ${SCP_CMD} ${CERTS} root@${name_ip[1]}:${NODE_CERTS_AND_CONFIGS_DIR}
+    ${SSH_CMD} root@${name_ip[2]} "if [ ! -d ${NODE_CERTS_AND_CONFIGS_DIR} ]; then mkdir -p ${NODE_CERTS_AND_CONFIGS_DIR}; fi"
+    ${SCP_CMD} ${CERTS} root@${name_ip[2]}:${NODE_CERTS_AND_CONFIGS_DIR}
   done
 }
 
@@ -35,8 +35,8 @@ function update_configs() {
     for config in "$@"; do CONFIGS="${CONFIGS} ${CERTS_AND_CONFIGS_DIR}/${config}" ; done
     echo "updating configs: ${name_ip[0]} $@"
 
-    ${SSH_CMD} root@${name_ip[1]} "if [ ! -d ${NODE_CERTS_AND_CONFIGS_DIR} ]; then mkdir -p ${NODE_CERTS_AND_CONFIGS_DIR}; fi"
-    ${SCP_CMD} ${CONFIGS} root@${name_ip[1]}:${NODE_CERTS_AND_CONFIGS_DIR}
+    ${SSH_CMD} root@${name_ip[2]} "if [ ! -d ${NODE_CERTS_AND_CONFIGS_DIR} ]; then mkdir -p ${NODE_CERTS_AND_CONFIGS_DIR}; fi"
+    ${SCP_CMD} ${CONFIGS} root@${name_ip[2]}:${NODE_CERTS_AND_CONFIGS_DIR}
   done
 }
 
@@ -44,7 +44,7 @@ function install_kata() {
   for node in ${WORKERS}; do
     name_ip=($(echo $node | tr "," "\n"))
 
-    ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/worker/setup_kata.sh ${NODE_ARGS}"
+    ${SSH_CMD} root@${name_ip[2]} "${NODE_SCRIPTS_DIR}/worker/setup_kata.sh ${NODE_ARGS}"
   done
 }
 
@@ -52,7 +52,7 @@ function install_runc() {
   for node in ${WORKERS}; do
     name_ip=($(echo $node | tr "," "\n"))
 
-    ${SSH_CMD} root@${name_ip[1]} "bash -x ${NODE_SCRIPTS_DIR}/worker/setup_runc.sh ${NODE_ARGS}"
+    ${SSH_CMD} root@${name_ip[2]} "bash -x ${NODE_SCRIPTS_DIR}/worker/setup_runc.sh ${NODE_ARGS}"
   done
 
   EXEC_ON_ONE_CONTROLLER=false
@@ -62,7 +62,7 @@ function install_runc() {
       # TODO force redeployment with -frd / --force-redeployment
       # kubectl delete daemonset calico-node -n kube-system
       # kubectl delete deployment calico-kube-controllers -n kube-system
-      ${SSH_CMD} root@${cmu_name_ip[1]} "${NODE_SCRIPTS_DIR}/controller/setup_runc.sh ${NODE_ARGS}"
+      ${SSH_CMD} root@${cmu_name_ip[2]} "${NODE_SCRIPTS_DIR}/controller/setup_runc.sh ${NODE_ARGS}"
       EXEC_ON_ONE_CONTROLLER=true
     fi
   done
@@ -72,7 +72,7 @@ function install_containerd() {
   for node in ${WORKERS}; do
     name_ip=($(echo $node | tr "," "\n"))
 
-    ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/worker/setup_containerd.sh ${NODE_ARGS}"
+    ${SSH_CMD} root@${name_ip[2]} "${NODE_SCRIPTS_DIR}/worker/setup_containerd.sh ${NODE_ARGS}"
   done
 }
 
@@ -80,7 +80,7 @@ function install_kubernetes_workers() {
   for node in ${WORKERS}; do
     name_ip=($(echo $node | tr "," "\n"))
 
-    ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/worker/setup_kubernetes_worker.sh ${NODE_ARGS}"
+    ${SSH_CMD} root@${name_ip[2]} "${NODE_SCRIPTS_DIR}/worker/setup_kubernetes_worker.sh ${NODE_ARGS}"
   done
 }
 
@@ -88,7 +88,7 @@ function install_cni_calico() {
   for node in ${WORKERS}; do
     name_ip=($(echo $node | tr "," "\n"))
 
-    ${SSH_CMD} root@${name_ip[1]} "${NODE_SCRIPTS_DIR}/worker/setup_cni_calico.sh ${NODE_ARGS}"
+    ${SSH_CMD} root@${name_ip[2]} "${NODE_SCRIPTS_DIR}/worker/setup_cni_calico.sh ${NODE_ARGS}"
   done
 
   EXEC_ON_ONE_CONTROLLER=false
@@ -98,7 +98,7 @@ function install_cni_calico() {
       # TODO force redeployment with -frd / --force-redeployment
       # kubectl delete daemonset calico-node -n kube-system
       # kubectl delete deployment calico-kube-controllers -n kube-system
-      ${SSH_CMD} root@${cmu_name_ip[1]} "${NODE_SCRIPTS_DIR}/controller/setup_cni_calico_typha.sh ${NODE_ARGS}"
+      ${SSH_CMD} root@${cmu_name_ip[2]} "${NODE_SCRIPTS_DIR}/controller/setup_cni_calico_typha.sh ${NODE_ARGS}"
       EXEC_ON_ONE_CONTROLLER=true
     fi
   done

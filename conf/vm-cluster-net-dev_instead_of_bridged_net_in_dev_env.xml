@@ -1,0 +1,11 @@
+<network>
+  <name>vm-cluster-net-dev</name>
+  <bridge name='vmbr24dev' stp='on' delay='0'/>
+  <mac address='52:54:00:e2:e2:e2'/>
+  <domain name='vm-cluster-net-dev'/>
+  <ip address='192.168.24.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.24.128' end='192.168.24.254'/>
+    </dhcp>
+  </ip>
+</network>

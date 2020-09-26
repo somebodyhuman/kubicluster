@@ -71,6 +71,28 @@ while [[ $# -gt 0 ]]; do
       -sd=*|--storage-dir=*)
       VIRT_STORAGE_DIR="${key#*=}"
       ;;
+      -tip=*|--template-ip=*)
+      TEMPLATE_DEFAULT_CONNECTION_IP="${key#*=}"
+      ;;
+      -tif=*|--template-interface=*)
+      TEMPLATE_DEFAULT_CONNECTION_INTERFACE="${key#*=}"
+      ;;
+      -tcip=*|--template-cluster-ip=*)
+      TEMPLATE_CLUSTER_CONNECTION_IP="${key#*=}"
+      ;;
+      -tcif=*|--template-cluster-interface=*)
+      TEMPLATE_CLUSTER_CONNECTION_INTERFACE="${key#*=}"
+      ;;
+      -bp=*|--bridge-port=*)
+      BRIDGE_PORT="${key#*=}"
+      ;;
+      -bi=*|--bridge-interface=*)
+      BRIDGE_INTERFACE="${key#*=}"
+      ;;
+      -ndev|--cluster-net-dev)
+      USE_DEV_VM_NET=true
+      BRIDGE_INTERFACE="${BRIDGE_INTERFACE}dev"
+      ;;
 # --- 021
       ## etcd
       -t=*|--cluster-token=*)
@@ -190,7 +212,13 @@ if [ "${DEBUG}" = true ]; then
   echo "[DEBUG]: values of optional hypervisor arguments"
   if [ "${SCRIPTS_DIR}" != "$(realpath ${THIS_DIR}/../scripts)" ];      then echo "[DEBUG]: SCRIPTS_DIR=${SCRIPTS_DIR} (default: $(realpath ${THIS_DIR}/../scripts))"; fi
   if [ "${IMAGES_DIR}" != "${WORKDIR}/${IMAGES}" ];                     then echo "[DEBUG]: IMAGES_DIR=${IMAGES_DIR} (default: ${WORKDIR}/${IMAGES})"; fi
-  if [ "${TEMPLATE_IP}" != "192.168.122.254" ];                         then echo "[DEBUG]: TEMPLATE_IP=${TEMPLATE_IP} (default: 192.168.122.254)"; fi
+  if [ "${TEMPLATE_DEFAULT_CONNECTION_IP}" != "192.168.122.254" ];      then echo "[DEBUG]: TEMPLATE_DEFAULT_CONNECTION_IP=${TEMPLATE_DEFAULT_CONNECTION_IP} (default: 192.168.122.254)"; fi
+  if [ "${TEMPLATE_CLUSTER_CONNECTION_IP}" != "192.168.24.254" ];       then echo "[DEBUG]: TEMPLATE_CLUSTER_CONNECTION_IP=${TEMPLATE_CLUSTER_CONNECTION_IP} (default: 192.168.24.254)"; fi
+  if [ "${TEMPLATE_DEFAULT_CONNECTION_INTERFACE}" != "enp1s0" ];        then echo "[DEBUG]: TEMPLATE_DEFAULT_CONNECTION_INTERFACE=${TEMPLATE_DEFAULT_CONNECTION_INTERFACE} (default: enp1s0)" ; fi
+  if [ "${TEMPLATE_CLUSTER_CONNECTION_INTERFACE}" != "enp7s0" ];        then echo "[DEBUG]: TEMPLATE_CLUSTER_CONNECTION_INTERFACE=${TEMPLATE_CLUSTER_CONNECTION_INTERFACE} (default: enp7s0)" ; fi
+  if [ "${BRIDGE_PORT}" != "eth1" ];                                    then echo "[DEBUG]: BRIDGE_PORT=${BRIDGE_PORT} (default: eth1)" ; fi
+  if [ "${BRIDGE_INTERFACE}" != "vmbr24" ];                             then echo "[DEBUG]: BRIDGE_INTERFACE=${BRIDGE_INTERFACE} (default: vmbr24)" ; fi
+  if [ "${VM_NET_IN_DEV_ENV}" != "vm-cluster-net-dev" ];                then echo "[DEBUG]: VM_NET_IN_DEV_ENV=${VM_NET_IN_DEV_ENV} (default: vm-cluster-net-dev)" ; fi
   if [ "${TEMPLATE_XML}" != "conf/vm-template.xml" ];                   then echo "[DEBUG]: TEMPLATE_XML=${TEMPLATE_XML} (default: conf/vm-template.xml)"; fi
   if [ "${VM_CONFIGS_DIR}" != "${WORKDIR}/${VM_CONFIGS}" ];             then echo "[DEBUG]: VM_CONFIGS_DIR=${VM_CONFIGS_DIR} (default: ${WORKDIR}/${VM_CONFIGS})"; fi
   if [ "${TEMPLATE_ROOT_SSH_KEY}" != "${IMAGES_DIR}/vm-template_rsa" ]; then echo "[DEBUG]: TEMPLATE_ROOT_SSH_KEY=${TEMPLATE_ROOT_SSH_KEY} (default: ${IMAGES_DIR}/vm-template_rsa)"; fi

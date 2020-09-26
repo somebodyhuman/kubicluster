@@ -25,11 +25,14 @@ if [ "${SCRIPTS_DIR}" = "" ];       then SCRIPTS_DIR=$(realpath ${THIS_DIR}/../s
 source ${SCRIPTS_DIR}/utils/env-strings
 
 ## on hypervisor: paths to files and directories used in virtual machine management commands
-if [ "${IMAGES_DIR}" = "" ];            then IMAGES_DIR=${WORKDIR}/${IMAGES} ; fi
-if [ "${TEMPLATE_IP}" = "" ];           then TEMPLATE_IP='192.168.122.254' ; fi
-if [ "${TEMPLATE_XML}" = "" ];          then TEMPLATE_XML=conf/vm-template.xml ; fi
-if [ "${VM_CONFIGS_DIR}" = "" ];        then VM_CONFIGS_DIR=${WORKDIR}/${VM_CONFIGS} ; fi
-if [ "${TEMPLATE_ROOT_SSH_KEY}" = "" ]; then TEMPLATE_ROOT_SSH_KEY=${IMAGES_DIR}/vm-template_rsa ; fi
+if [ "${IMAGES_DIR}" = "" ];                            then IMAGES_DIR=${WORKDIR}/${IMAGES} ; fi
+if [ "${TEMPLATE_DEFAULT_CONNECTION_IP}" = "" ];        then TEMPLATE_DEFAULT_CONNECTION_IP='192.168.122.254' ; fi
+if [ "${TEMPLATE_CLUSTER_CONNECTION_IP}" = "" ];        then TEMPLATE_CLUSTER_CONNECTION_IP='192.168.24.254' ; fi
+if [ "${TEMPLATE_DEFAULT_CONNECTION_INTERFACE}" = "" ]; then TEMPLATE_DEFAULT_CONNECTION_INTERFACE='enp1s0' ; fi
+if [ "${TEMPLATE_CLUSTER_CONNECTION_INTERFACE}" = "" ]; then TEMPLATE_CLUSTER_CONNECTION_INTERFACE='enp7s0' ; fi
+if [ "${TEMPLATE_XML}" = "" ];                          then TEMPLATE_XML=conf/vm-template.xml ; fi
+if [ "${VM_CONFIGS_DIR}" = "" ];                        then VM_CONFIGS_DIR=${WORKDIR}/${VM_CONFIGS} ; fi
+if [ "${TEMPLATE_ROOT_SSH_KEY}" = "" ];                 then TEMPLATE_ROOT_SSH_KEY=${IMAGES_DIR}/vm-template_rsa ; fi
 
 ## on hyppervisor: path to files and directories used in kubernetes management commands
 if [ "${TOOLS_DIR}" = "" ];                    then TOOLS_DIR=${WORKDIR}/${TOOLS} ; fi
@@ -39,8 +42,8 @@ KUBECTL_CMD_ON_HYPERVISOR=${KUBERNETES_ON_HYPERVISOR_DIR}/kubernetes/client/bin/
 
 ## on hypervisor: variables and path to files used in certificate management commands
 if [ "${RSA_KEYLENGTH}" = "" ];                then RSA_KEYLENGTH=8192 ; fi
-if [ "${CERTS_AND_CONFIGS_DIR}" = "" ];         then CERTS_AND_CONFIGS_DIR=${WORKDIR}/${CERTS_AND_CONFIGS} ; fi
-if [ "${CERTS_AND_CONFIGS_MIRROR_DIR}" = "" ];  then CERTS_AND_CONFIGS_MIRROR_DIR=${CERTS_AND_CONFIGS_DIR}/mirror ; fi
+if [ "${CERTS_AND_CONFIGS_DIR}" = "" ];        then CERTS_AND_CONFIGS_DIR=${WORKDIR}/${CERTS_AND_CONFIGS} ; fi
+if [ "${CERTS_AND_CONFIGS_MIRROR_DIR}" = "" ]; then CERTS_AND_CONFIGS_MIRROR_DIR=${CERTS_AND_CONFIGS_DIR}/mirror ; fi
 ## default cert names
 if [ "${CA_CONFIG}" = "" ]; then CA_CONFIG=${CERTS_AND_CONFIGS_DIR}/ca-config.json ; fi
 if [ "${CA_CSR}" = "" ];    then CA_CSR=${CERTS_AND_CONFIGS_DIR}/ca-csr.json ; fi
@@ -62,10 +65,14 @@ SSH_CMD="ssh ${SSH_OPTS}"
 SCP_CMD="scp ${SSH_OPTS}"
 
 # default values for optional args
-if [ "${VIRT_STORAGE_DIR}" = "" ];  then VIRT_STORAGE_DIR=/var/lib/libvirt/images ; fi
-if [ "${VCPUS}" = "" ];             then VCPUS=1 ; fi
-if [ "${VMEM}" = "" ];              then VMEM=4194304 ; fi
-if [ "${QEMU_TYPE}" = "" ];         then QEMU_TYPE='qcow2' ; fi
+if [ "${VIRT_STORAGE_DIR}" = "" ];             then VIRT_STORAGE_DIR=/var/lib/libvirt/images ; fi
+if [ "${VCPUS}" = "" ];                        then VCPUS=1 ; fi
+if [ "${VMEM}" = "" ];                         then VMEM=4194304 ; fi
+if [ "${QEMU_TYPE}" = "" ];                    then QEMU_TYPE='qcow2' ; fi
+if [ "${BRIDGE_PORT}" = "" ];                           then BRIDGE_PORT='eth1' ; fi
+if [ "${BRIDGE_INTERFACE}" = "" ];                      then BRIDGE_INTERFACE='vmbr24' ; fi
+if [ "${VM_NET_IN_DEV_ENV}" = "" ];                     then VM_NET_IN_DEV_ENV='vm-cluster-net-dev' ; fi
+if [ "${USE_DEV_VM_NET}" = "" ];                        then USE_DEV_VM_NET=false ; fi
 
 # source all node variables including tool versions used for the cluster
 source ${SCRIPTS_DIR}/utils/env-variables "$@"

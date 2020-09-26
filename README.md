@@ -132,6 +132,11 @@ Authentication over an SSH_KEY (instead of password) is considered safer and all
 
 Kubernetes relies heavily on certificates to manage access and authentication. To be future proof for a good while the default RSA keylength to be used to generate certificates is set to 8192. Any keylength of 2048 and higher is considered save. A custom keylength can be defined with the environment variable `RSA_KEYLENGTH`.
 
+#### Networking
+
+Nodes/Virtual machines should be able to communicate over a network with each other that is separate from their default connection to their respective host. This has two advantages:
+* accessibility under load: purely administrative traffic can still pass through the default network which allows to connect from the host into the virtual machine, even in cases where the interface through which cluster traffic passes is broke down or is temporarly overloaded.
+* security: cluster traffic runs in it's own network and is neatly separated from other traffic.
 
 ## Usage
 
@@ -144,16 +149,70 @@ git clone https://github.com/sray/kubicluster.git
 ln -s $(pwd)/kubicluster/kubicluster /usr/local/bin/kubicluster
 ```
 
+### The template vm
+
+The template image (vm.qcow2), which you intend to use as a base image for your kubicluster nodes, needs to have two interfaces defined in it's /etc/network/interfaces. To setup a minimal development cluster, this is usually not a standard requirement, but it is good practice in production environment to distribute different types of traffic across different networks and interfaces. Therefore, in kubicluster, having two interfaces from the start is a must. While it may take a little more time to understand this and set this up (if you are using kubicluster, there is no difference at all since kubicluster creates and manages both networks on the hypervisor for you), it gives you the opportunity to debug networking problems in your production cluster later on more easily, if your development environment resembles it more closely.
+
+The following shows the configuration of two interfaces in /etc/network/interfaces inside a template VM using kubicluster default values:
+```bash
+# The primary network interface
+allow-hotplug enp1s0
+iface enp1s0 inet static
+	address 192.168.122.254/24
+	gateway 192.168.122.1
+
+# The vm cluster network interface
+allow-hotplug enp7s0
+iface enp7s0 inet static
+	address 192.168.24.254/24
+	gateway 192.168.24.1
+```
+
+When executing the step/sub-command `kubicluster create-vms` those default values are overwritten. If the definition of those two network interfaces deviates from the expected default values, you need to provide them as arguments to `kubicluster create-vms`. The gateways need to be set correctly inside the template vm already (otherwise your template vm would not be managable through ssh plus testing the connection between the cluster bridge and the template vm helps in debugging networking problems later on).
+
+Any other interface specific configuration can be added (e.g. mtu in the following overview) and will not be changed by kubicluster.
+
+```bash
+# The primary network interface                             ### corresponding command line argument
+allow-hotplug ${TEMPLATE_DEFAULT_CONNECTION_INTERFACE}      # -tif=enp1s0|--template-interface=enp1s0
+iface ${TEMPLATE_DEFAULT_CONNECTION_INTERFACE} inet static  # -tif=enp1s0|--template-interface=enp1s0
+	address ${TEMPLATE_DEFAULT_CONNECTION_IP}/24              # -tip=192.168.122.254|--template-ip=192.168.122.254
+	gateway 192.168.122.1
+
+# The vm cluster network interface
+allow-hotplug ${TEMPLATE_CLUSTER_CONNECTION_INTERFACE}      # -tcif=enp7s0|--template-cluster-interface=enp7s0
+iface ${TEMPLATE_DEFAULT_CONNECTION_INTERFACE} inet static  # -tcif=enp7s0|--template-cluster-interface=enp7s0
+	address ${TEMPLATE_CLUSTER_CONNECTION_IP}/24              # -tcip=192.168.24.254|--template-cluster-ip=192.168.24.254
+	gateway 192.168.24.1
+	mtu 1400
+```
+
 ### Standard flow to create a small development cluster
 
 The following creates a small cluster on one hypervisor with one controller (also hosting the one etcd instance) and two worker nodes.
 ```bash
-CONTROLLER_01=kubi-controller-01,192.168.122.11
-WORKER_0001=kubi-worker-0001,192.168.122.21
-WORKER_0002=kubi-worker-0002,192.168.122.22
+# set the c-level net for network connections between hypervisor and a vm
+HYPERVISOR_NET=192.168.122
+# set the c-level net for network connections between vms (kubernetes cluster traffic will go through them)
+# note: this specifices the VM cluster network ON TOP OF WHICH the kubernetes cluster 10.32.i.i/16 will run
+# note: so far only c-nets within 192.168.0.0/16 are supported
+VM_CLUSTER_NET=192.168.24
+CONTROLLER_01=kubi-controller-01,${VM_CLUSTER_NET}.11,${HYPERVISOR_NET}.11
+WORKER_0001=kubi-worker-0001,${VM_CLUSTER_NET}.21,${HYPERVISOR_NET}.21
+WORKER_0002=kubi-worker-0002,${VM_CLUSTER_NET}.22,${HYPERVISOR_NET}.22
 # note: you manage IP allocation, so be sure you do not have IP conflicts between nodes on the same hypervisor
 
-./kubicluster prepare path/to/vm.qcow2 path/to/vm-root-ssh_rsa
+# checkout the optional arguments template-(interface|ip) and template-cluster-(interface|ip) for create vms
+./kubicluster create-vms help
+# if your template vm uses other interface names or different ips for those interfaces add the respective arguments to the following create-vms commands (e.g. --template-cluster-interface=enp7s0)
+
+# DECIDE between A and B:
+# A: in a dev environment (vms will only be able to communicate with one another if they are running on the same hypervisor)
+./kubicluster prepare path/to/vm.qcow2 path/to/vm-root-ssh_rsa -tip=${VM_CLUSTER_NET} -ndev
+./kubicluster create-vms ${CONTROLLER_01} ${WORKER_0001} ${WORKER_0002} -ndev
+
+# B: in a production environment (multi-hypervisor support, cluster network is bridged)
+./kubicluster prepare path/to/vm.qcow2 path/to/vm-root-ssh_rsa -tip=${VM_CLUSTER_NET}
 ./kubicluster create-vms ${CONTROLLER_01} ${WORKER_0001} ${WORKER_0002}
 
 # generate _C_ertificates a_N_d _C_onfiguration files

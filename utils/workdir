@@ -32,6 +32,6 @@ case "$1" in
     ensure_exists ${VM_CONFIGS_DIR}
     ;;
   *)
-    echo "Usage: [WORKDIR=./work] $0 {ensure_exists|ensure_images_dir_exists|ensure_certs_and_configs_dir_exists|ensure_tools_dir_exists}"
+    echo "Usage: $0 {ensure_exists|ensure_images_dir_exists|ensure_certs_and_configs_dir_exists|ensure_tools_dir_exists|ensure_vm_configs_dir_exists}"
     ;;
 esac

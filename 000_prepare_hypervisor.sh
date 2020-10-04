@@ -122,6 +122,7 @@ function set_vm_template() {
   if [ "$FILE_EXT" != "qcow2" ]; then echo 'only .qcow2 is supported as a vm template type ... exiting'; exit 1; fi
   cp $1 ${IMAGES_DIR}/vm-template.${FILE_EXT}
   cp $2 ${TEMPLATE_ROOT_SSH_KEY}
+  chmod 400 ${TEMPLATE_ROOT_SSH_KEY}
 }
 
 function setup_kubectl() {

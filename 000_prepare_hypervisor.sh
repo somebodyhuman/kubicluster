@@ -102,6 +102,7 @@ function setup_vm_cluster_net_in_dev_env() {
 }
 
 function setup_vm_cluster_net() {
+  source ${DIR}/utils/workdir ensure_vm_configs_dir_exists
   if [ "${USE_DEV_VM_NET}" = true ]; then
     setup_vm_cluster_net_in_dev_env
   else
@@ -168,7 +169,7 @@ case "${SUB_CMD}" in
     echo -e "\nOPTIONAL ARGUMENTS:"
     echo -e "setup_vm_cluster_net -tcip=192.168.24.0|--template-cluster-ip=192.168.24.9 ip c-net over which the vms can communicate with each other in the cluster (across servers)"
     echo -e "setup_vm_cluster_net -bp=eth1|--bridge-port the name of the physical interface on the hypervisor which is connected to the cluster bridge (which connects vms across servers)"
-    echo -e "setup_vm_cluster_net -bi=|--bridge-interface the name of the bridge on the hypervisor which links the physical cluster interface to the virtual machines/nodes; don't forget to provide the same argument when running kubicluster create-vms"
+    echo -e "setup_vm_cluster_net -bi=vmbr24|--bridge-interface the name of the bridge on the hypervisor which links the physical cluster interface to the virtual machines/nodes; don't forget to provide the same argument when running kubicluster create-vms"
     echo -e "setup_vm_cluster_net -ndev|--cluster-net-dev if argument is provided, a local vm net (managed with virsh) is created and used instead of a OS managed bridge (this is usually only suitable if the whole vm cluster lives on a single server e.g. in a development environment or a very small production environment; a note for advanced setups: you can prepare a hypervisor with both a virsh managed cluster network (for dev and testing traffic) and one or more OS managed bridges to be used to separate traffic of different clusters or parts of clusters running on the same server - to set this up, run the setup_vm_cluster_net sub-command for each virsh-managed net or OS managed bridge you would like to have at your disposal on this server and provide the same arguments when running kubicluster create-vms. To move a cluster vm later from one network (e.g. the dev-net) into the another one (e.g. the corresponding prod-net via the OS managed bridge) run virsh edit and remove the suffix 'dev' from the bridge name stated in the interface section."
     echo -e "setup_vm_cluster_net -f|--force-update forcefully overwrites/recreates the cluster network (use with caution)"
     echo -e "\nOPTIONAL ENVIRONMENT VARIABLES:"

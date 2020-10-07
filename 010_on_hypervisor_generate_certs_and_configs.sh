@@ -113,7 +113,7 @@ function generate_configs() {
 
     config_file=${CERTS_AND_CONFIGS_DIR}/${NAME}.kubeconfig
     SERVER_IP='127.0.0.1'
-    if [ "${NAME}" = "kube-proxy" ] || [ "${NAME}" = "calico-cni" ] ; then SERVER_IP=${CONTROLLER_LB_IP}; fi
+    if [ "${NAME}" = "kube-proxy" ] || [ "${NAME}" = "calico-cni" ] || [ "${NAME}" = "admin" ]; then SERVER_IP=${CONTROLLER_LB_IP}; fi
     if [ ! -e ${config_file} ] || [ "${FORCE_UPDATE}" = true ]; then
       echo "generating config for ${NAME} into ${NAME}.kubeconfig"
       ${KUBECTL_CMD_ON_HYPERVISOR} config set-cluster ${CLUSTER_NAME} --server=https://${SERVER_IP}:6443 \

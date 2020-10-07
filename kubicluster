@@ -18,6 +18,9 @@ case "$1" in
   create-workers)
     ${THE_DIR}/032_on_vms_create_worker_nodes.sh "${@:2}"
     ;;
+  cluster-net)
+    ${THE_DIR}/utils/cluster-net.sh "${@:2}"
+    ;;
   version)
     echo "1.0.0"
     ;;
@@ -36,5 +39,6 @@ case "$1" in
     echo "$0 create-vms"
     echo "$0 create-controllers"
     echo "$0 create-workers"
+    echo "$0 cluster-net"
     echo "For details about command usage run: $0 COMMAND help"
 esac

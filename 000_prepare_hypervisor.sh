@@ -2,6 +2,8 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
+PRINT_OUT_FIREWALL_INFO=false
+
 function install_dependencies() {
   apt-get install -y curl iptables-persistent ntp python3
 }
@@ -15,13 +17,27 @@ function setup_virtualisation() {
   fi
 
   apt-get install -y qemu qemu-kvm qemu-system qemu-utils libvirt-clients libvirt-daemon-system virtinst
+
+  # enable modules to manage traffic between vms using iptables
+  KERNEL_MODULES_FAILED=0
+  for module in br_netfilter overlay; do
+    if [ "$(grep ${module} /etc/modules)" = "" ]; then echo -e "\n${module}" >>/etc/modules ; modprobe ${module} ; fi
+    if ! lsmod | grep ${module}; then echo "kernel module ${module} could not be activated" ; KERNEL_MODULES_FAILED=$((${KERNEL_MODULES_FAILED} + 1)) ; fi
+  done
+
+  if [[ ${KERNEL_MODULES_FAILED} -gt 0 ]]; then exit ${KERNEL_MODULES_FAILED} ; fi
+
+
   # enable port forwarding
   IP4="net.ipv4.ip_forward=1"
   IP6="net.ipv6.conf.all.forwarding=1"
   IP6DEF="net.ipv6.conf.default.forwarding=1"
+  BRNF="net.bridge.bridge-nf-call-iptables=1"
+  BRNF6="net.bridge.bridge-nf-call-ip6tables=1"
+
   SYSCONF=/etc/sysctl.d/kubectl.conf
 
-  CONFS=($IP4 $IP6 $IP6DEF)
+  CONFS=($IP4 $IP6 $IP6DEF $BRNF $BRNF6)
 
   for IPC in "${CONFS[@]}"; do
     if egrep "^$IPC" $SYSCONF ; then
@@ -30,7 +46,13 @@ function setup_virtualisation() {
       echo $IPC >>$SYSCONF
     fi
   done
-  sysctl -p
+
+  cat <<EOF | tee /etc/sysctl.d/991-container-runtimes.conf
+  net.ipv4.ip_forward=1
+  net.ipv6.ip_forward=1
+EOF
+
+  sysctl --system
 
   if ! virsh net-list --all | grep -v inactive | grep default >/dev/null; then
     # start vm network
@@ -38,8 +60,8 @@ function setup_virtualisation() {
   fi
   # enable autostart of vm network
   virsh net-autostart default
-  # TODO vm network stuff: create default nw and ...
-  # configure network if there is none configured yet
+
+  PRINT_OUT_FIREWALL_INFO=true
 }
 
 function setup_vm_cluster_net_os_bridge() {
@@ -184,3 +206,44 @@ case "${SUB_CMD}" in
     set_vm_template "${REMARGS_ARRAY[@]}"
     setup_kubectl
 esac
+
+if [ "${PRINT_OUT_FIREWALL_INFO}" = true ]; then
+  echo "[INFO]: The setup_virtualiation command has been run. Note, that libvirt automatically may adjust iptables rules by default."
+  echo "[INFO]: In some versions libvirt adds new rules for every bridge/virtual network in nat-mode to iptables."
+  echo "[INFO]: It is recommended that once the default network has been activated for the first time, to persist the generated rules and \"deactivate\" the re-addition of those rules."
+  echo "More information about it/ the source of the following two suggestions can be found here: https://serverfault.com/questions/456708/how-do-i-prevent-libvirt-from-adding-iptables-rules-for-guest-nat-networks ."
+
+  echo -e "\nOne way to achieve this is to switch to bridge mode and configure the bridge manually outside libvirt/virsh."
+  echo "Another one is to use hooks to overwrite the rules (re-)generated (again and again) by libvirt/virsh by running the following commands accordingly for your firewall solution. To do this with plain iptables:"
+  echo "# ensure iptables are persisted across reboots of the hypervisor"
+  echo "apt-get install -y iptables-persistent"
+  echo "# save the current rules after the first time activation of the default network, so they are included when restored"
+  echo "iptables-save >/etc/iptables/rules.v4'"
+  echo "# create the libvirt hooks"
+  echo "mkdir /etc/libvirt/hooks"
+  echo "for f in daemon qemu lxc libxl network; do"
+  echo "  echo '#!/bin/sh"
+  echo "  iptables-restore < /etc/iptables/rules.v4' >\"/etc/libvirt/hooks/$f\""
+  echo "  chmod +x \"/etc/libvirt/hooks/$f\""
+  echo "done"
+  echo "systemctl restart libvirtd.service"
+
+  echo -e "\n[WARN]: IF USING THE DEFAULT GENERATED FIREWALL RULES your vms will be able to communicate with each other over the hypervisor net."
+  echo "[WARN]: IF YOU WISH TO ISOLATE TRAFFIC BETWEEN"
+  echo "[WARN]: VMS (cluster traffic)"
+  echo "[WARN]: and each vm and the hypervisor (internet connection for package installs and admin connection)"
+  echo "[WARN]: REMOVE the auto-generated rules from ip-tables and configure the following for the default network:"
+
+  echo -e "\n[INFO]: Firewall rules are not adjusted automatically to prevent unintended side effects on your hypervisor."
+  echo "[INFO]: Ensure the following rules are configured in your respective firewall. The rules for iptables are:"
+  if [ "${HYPERVISOR_NET}" = "" ]; then
+    ip_part=($(echo ${TEMPLATE_DEFAULT_CONNECTION_IP} | tr "." "\n"))
+    HYPERVISOR_NET="${ip_part[0]}.${ip_part[1]}.${ip_part[2]}"
+  fi
+  echo "# allowing ssh traffic initiated by the hypervisor to the vms (but not vice versa):"
+  echo "iptables -I OUTPUT -s ${HYPERVISOR_NET}.1/32 -d ${HYPERVISOR_NET}.0/24 -o virbr0 -p tcp -m tcp --dport 22 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT"
+  echo "iptables -I INPUT  -d ${HYPERVISOR_NET}.1/32 -s ${HYPERVISOR_NET}.0/24 -i virbr0 -p tcp -m tcp --sport 22 -m conntrack --ctstate ESTABLISHED -j ACCEPT"
+  echo "# allowing icmp traffic between the hypervisor and each vm (but not between vms):"
+  echo "iptables -I OUTPUT -p icmp -s ${HYPERVISOR_NET}.1/32 -d ${HYPERVISOR_NET}.0/24 -o virbr0 -j ACCEPT"
+  echo "iptables -I INPUT  -p icmp -d ${HYPERVISOR_NET}.1/32 -s ${HYPERVISOR_NET}.0/24 -i virbr0 -j ACCEPT"
+fi

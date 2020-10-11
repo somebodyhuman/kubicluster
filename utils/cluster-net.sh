@@ -34,6 +34,17 @@ function activate() {
       echo "activating prod cluster: activating bridge ${BRIDGE_INTERFACE}"
       ifup ${BRIDGE_INTERFACE}
     fi
+    echo "[INFO]: Firewall rules are not adjusted automatically to prevent unintended side effects on your hypervisor."
+    echo "[INFO]: Ensure the following rules are configured in your respective firewall. The rules for iptables are:"
+    if [ "${VM_CLUSTER_NET}" = "" ]; then
+      ip_part=($(echo ${TEMPLATE_CLUSTER_CONNECTION_IP} | tr "." "\n"))
+      VM_CLUSTER_NET="${ip_part[0]}.${ip_part[1]}.${ip_part[2]}"
+    fi
+    echo "# allowing traffic between vms using the cluster network"
+    echo "iptables -I FORWARD -i ${BRIDGE_INTERFACE} -o ${BRIDGE_INTERFACE} -j ACCEPT"
+    echo "# allowing traffic initiated by the hypervisor to the vms (but not vice versa):"
+    echo "iptables -I OUTPUT -s ${VM_CLUSTER_NET}.1/32 -d ${VM_CLUSTER_NET}.0/24 -o ${BRIDGE_INTERFACE} -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT"
+    echo "iptables -I INPUT  -d ${VM_CLUSTER_NET}.1/32 -s ${VM_CLUSTER_NET}.0/24 -i ${BRIDGE_INTERFACE} -m conntrack --ctstate ESTABLISHED -j ACCEPT"
   else
     echo 'deactivate running cluster bridge/network before activating (another) one.'
     exit 1

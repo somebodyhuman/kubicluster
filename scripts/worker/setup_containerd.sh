@@ -9,7 +9,7 @@ CONTAINERD_DIR=${NODE_WORK_DIR}/containerd-${CONTAINERD_VERSION}
 
 # download and extract cni plugins
 if [ ! -f ${NODE_WORK_DIR}/cni-plugins-${CNI_PLUGINS_VERSION}.tar.gz ]; then
-  if ! (dpkg -s ca-certificates); then apt-get install -y ca-certificates; fi
+  if ! (dpkg -s ca-certificates); then apt-get update ; apt-get install -y ca-certificates; fi
   wget -q --show-progress --https-only --timestamping \
     "https://github.com/containernetworking/plugins/releases/download/v${CNI_PLUGINS_VERSION}/cni-plugins-linux-amd64-v${CNI_PLUGINS_VERSION}.tgz" -O ${NODE_WORK_DIR}/cni-plugins-${CNI_PLUGINS_VERSION}.tar.gz
 fi
@@ -43,7 +43,7 @@ fi
 
 # download and extract containerd
 if [ ! -f ${NODE_WORK_DIR}/containerd-${CONTAINERD_VERSION}.tar.gz ]; then
-  if ! (dpkg -s ca-certificates); then apt-get install -y ca-certificates; fi
+  if ! (dpkg -s ca-certificates); then apt-get update ; apt-get install -y ca-certificates; fi
   wget -q --show-progress --https-only --timestamping \
     "https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz" -O ${NODE_WORK_DIR}/containerd-${CONTAINERD_VERSION}.tar.gz
 fi

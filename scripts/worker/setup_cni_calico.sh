@@ -25,7 +25,7 @@ done
 if [[ ${KERNEL_MODULES_FAILED} -gt 0 ]]; then exit ${KERNEL_MODULES_FAILED} ; fi
 
 if [ ! -f ${NODE_WORK_DIR}/calicoctl-${CALICO_VERSION} ]; then
-  if ! (dpkg -s ca-certificates); then apt-get install -y ca-certificates; fi
+  if ! (dpkg -s ca-certificates); then apt-get update ; apt-get install -y ca-certificates; fi
   wget -q --show-progress --https-only --timestamping \
     "https://github.com/projectcalico/calicoctl/releases/download/v${CALICO_VERSION}/calicoctl" -O ${NODE_WORK_DIR}/calicoctl-${CALICO_VERSION}
 else
@@ -71,7 +71,7 @@ cat << EOF | tee /etc/cni/net.d/10-calico.conflist
 EOF
 
 if [ ! -f ${NODE_WORK_DIR}/calico-${CALICO_VERSION} ]; then
-  if ! (dpkg -s ca-certificates); then apt-get install -y ca-certificates; fi
+  if ! (dpkg -s ca-certificates); then apt-get update ; apt-get install -y ca-certificates; fi
   wget -q --show-progress --https-only --timestamping \
     "https://github.com/projectcalico/cni-plugin/releases/download/v${CALICO_VERSION}/calico-amd64" -O ${NODE_WORK_DIR}/calico-${CALICO_VERSION}
   chmod 755 ${NODE_WORK_DIR}/calico-${CALICO_VERSION}
@@ -80,7 +80,7 @@ else
 fi
 
 if [ ! -f ${NODE_WORK_DIR}/calico-ipam-${CALICO_VERSION} ]; then
-  if ! (dpkg -s ca-certificates); then apt-get install -y ca-certificates; fi
+  if ! (dpkg -s ca-certificates); then apt-get update ; apt-get install -y ca-certificates; fi
   wget -q --show-progress --https-only --timestamping \
     "https://github.com/projectcalico/cni-plugin/releases/download/v${CALICO_VERSION}/calico-ipam-amd64" -O ${NODE_WORK_DIR}/calico-ipam-${CALICO_VERSION}
     chmod 755 ${NODE_WORK_DIR}/calico-ipam-${CALICO_VERSION}

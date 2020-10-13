@@ -222,6 +222,23 @@ RSA_KEYLENGTH=2048 ./kubicluster cnc -c ${CONTROLLER_01} -w ${WORKER_0001} -w ${
 ```
 Running these commands to setup a cluster is rather straight forward. If you want to look under the hood and run all the sub-commands yourself, checkout the `*)` section in the sub-command argument parsing within the sub-command shell script files.
 
+If you later want to add another worker (e.g. kubi-worker-0003) to your cluster, you only need to execute the following:
+```bash
+HYPERVISOR_NET=192.168.122
+# set the c-level net for network connections between vms (kubernetes cluster traffic will go through them)
+# note: this specifices the VM cluster network ON TOP OF WHICH the kubernetes cluster 10.32.i.i/16 will run
+# note: so far only c-nets within 192.168.0.0/16 are supported
+VM_CLUSTER_NET=192.168.24
+CONTROLLER_01=kubi-controller-01,${VM_CLUSTER_NET}.11,${HYPERVISOR_NET}.11
+WORKER_0003=kubi-worker-0003,${VM_CLUSTER_NET}.23,${HYPERVISOR_NET}.23
+
+./kubicluster create-vms ${WORKER_0003} -ndev
+# or without the -ndev setting if you are using a real bridge linked to a physical interface or simply managed by yourself directly in the OS:
+# ./kubicluster create-vms ${WORKER_0003}
+./kubicluster cnc for_worker_nodes -w ${WORKER_0003} -c ${CONTROLLER_01}
+./kubicluster create-workers -c ${CONTROLLER_01} -w ${WORKER_0003}
+```
+
 ### Diving deeper
 
 The kubicluster command and each sub-command show information on how to use it and which environment variables and which command arguments are supported when called with `help`:

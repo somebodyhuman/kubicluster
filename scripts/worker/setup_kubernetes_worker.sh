@@ -13,7 +13,7 @@ KUBERNETES_SERVER_DIR=${KUBERNETES_DIR}/server
 if [ ! -d ${NODE_WORK_DIR} ]; then mkdir -p ${NODE_WORK_DIR}; fi
 
 if [ ! -f ${NODE_WORK_DIR}/kubernetes-${KUBERNETES_VERSION}.tar.gz ]; then
-  if ! (dpkg -s ca-certificates); then apt-get install -y ca-certificates; fi
+  if ! (dpkg -s ca-certificates); then apt-get update ; apt-get install -y ca-certificates; fi
   wget -q --show-progress --https-only --timestamping \
     "https://github.com/kubernetes/kubernetes/releases/download/v${KUBERNETES_VERSION}/kubernetes.tar.gz" -O ${NODE_WORK_DIR}/kubernetes-${KUBERNETES_VERSION}.tar.gz
 fi
@@ -94,6 +94,7 @@ ExecStart=/usr/local/bin/kubelet \\
  --network-plugin=cni \\
  --register-node=true \\
  --v=2 \\
+ --node-ip=${CLUSTER_NET_IP} \\
  --hostname-override=${HOSTNAME}
 Restart=on-failure
 RestartSec=5

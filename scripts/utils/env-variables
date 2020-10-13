@@ -103,6 +103,10 @@ while [[ $# -gt 0 ]]; do
       FORCE_ETCD_DATA_RESET=true
       ;;
 # --- 032
+      ## on worker nodes only: node ip for kubelet
+      -kip|--kubelet-ip)
+      CLUSTER_NET_IP="${key#*=}"
+      ;;
 # --- ALL
       -f|--force-update)
       FORCE_UPDATE=true
@@ -284,7 +288,7 @@ if [ "${DEBUG}" = true ]; then
 
   ## on worker nodes only
   if [ "${CNI_CONF_DIR}" != "/etc/cni/net.d" ];       then echo "[DEBUG]: CNI_CONF_DIR=${CNI_CONF_DIR} (default: /etc/cni/net.d)"; fi
-
-  if [ "${CALICO_USER}" != "calico-cni" ];    then echo "[DEBUG]: CALICO_USER=${CALICO_USER} (default: calico-cni)"; fi
+  if [ "${CALICO_USER}" != "calico-cni" ];            then echo "[DEBUG]: CALICO_USER=${CALICO_USER} (default: calico-cni)"; fi
+  if [ "${CLUSTER_NET_IP}" != "" ];                   then echo "[DEBUG]: CLUSTER_NET_IP=${CLUSTER_NET_IP} (default: has no default value)"; fi
   echo "[DEBUG]: ---"
 fi

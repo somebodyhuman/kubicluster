@@ -8,7 +8,7 @@ function update_scripts_in_nodes() {
     name_ip=($(echo $node | tr "," "\n"))
     echo "syncing scripts dir to node ${name_ip[0]}"
     ${SSH_CMD} root@${name_ip[2]} "if [ ! -d ${NODE_SCRIPTS_DIR} ]; then mkdir -p ${NODE_SCRIPTS_DIR}; fi"
-    ${SSH_CMD} root@${name_ip[2]} "if [ ! -f /usr/bin/rsync ]; then apt-get install -y rsync; fi"
+    ${SSH_CMD} root@${name_ip[2]} "if [ ! -f /usr/bin/rsync ]; then apt-get update ; apt-get install -y rsync; fi"
     echo ${RSYNC_CMD}
     rsync -e "${SSH_CMD}" -av --no-owner --no-group ${SCRIPTS_DIR}/* root@${name_ip[2]}:${NODE_SCRIPTS_DIR}
   done
@@ -80,7 +80,7 @@ function install_kubernetes_workers() {
   for node in ${WORKERS}; do
     name_ip=($(echo $node | tr "," "\n"))
 
-    ${SSH_CMD} root@${name_ip[2]} "${NODE_SCRIPTS_DIR}/worker/setup_kubernetes_worker.sh ${NODE_ARGS}"
+    ${SSH_CMD} root@${name_ip[2]} "${NODE_SCRIPTS_DIR}/worker/setup_kubernetes_worker.sh ${NODE_ARGS} -kip=${name_ip[1]}"
   done
 }
 

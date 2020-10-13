@@ -8,6 +8,15 @@ if ! which curl; then
   apt-get install -y curl
 fi
 
+KERNEL_MODULES_FAILED=0
+for module in br_netfilter overlay; do
+  if [ "$(grep ${module} /etc/modules)" = "" ]; then echo -e "\n${module}" >>/etc/modules ; modprobe ${module} ; fi
+  if ! lsmod | grep ${module}; then echo "kernel module ${module} could not be activated" ; KERNEL_MODULES_FAILED=$((${KERNEL_MODULES_FAILED} + 1)) ; fi
+done
+
+if [[ ${KERNEL_MODULES_FAILED} -gt 0 ]]; then exit ${KERNEL_MODULES_FAILED} ; fi
+
+
 # container runtime requirements
 # kubernets preps
 cat <<EOF | tee /etc/sysctl.d/991-container-runtimes.conf
@@ -18,14 +27,6 @@ net.ipv6.ip_forward=1
 EOF
 
 sysctl --system
-
-KERNEL_MODULES_FAILED=0
-for module in br_netfilter overlay; do
-  if [ "$(grep ${module} /etc/modules)" = "" ]; then echo -e "\n${module}" >>/etc/modules ; modprobe ${module} ; fi
-  if ! lsmod | grep ${module}; then echo "kernel module ${module} could not be activated" ; KERNEL_MODULES_FAILED=$((${KERNEL_MODULES_FAILED} + 1)) ; fi
-done
-
-if [[ ${KERNEL_MODULES_FAILED} -gt 0 ]]; then exit ${KERNEL_MODULES_FAILED} ; fi
 
 # the container runtimes
 # according to https://github.com/kata-containers/documentation/blob/master/install/debian-installation-guide.md

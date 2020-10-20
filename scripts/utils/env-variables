@@ -34,7 +34,9 @@ if [ "${NODE_SCRIPTS_DIR}" = "" ];            then NODE_SCRIPTS_DIR=${NODE_WORK_
 if [ "${NODE_CERTS_AND_CONFIGS_DIR}" = "" ];  then NODE_CERTS_AND_CONFIGS_DIR=${NODE_WORK_DIR}/${CERTS_AND_CONFIGS} ; fi
 if [ "${ETCD_CLIENT_PORT}" = "" ];            then ETCD_CLIENT_PORT=2379 ; fi
 if [ "${CLUSTER_DNS}" = "" ];                 then CLUSTER_DNS='10.32.0.10' ; fi
+# the ip range for exposed services (CLUSTER_IP_RANGE)
 if [ "${CLUSTER_IP_RANGE}" = "" ];            then CLUSTER_IP_RANGE='10.32.0.0/24' ; fi
+# the ip range for pods inside the cluster (CLUSTER_CIDR)
 if [ "${CLUSTER_CIDR}" = "" ];                then CLUSTER_CIDR='10.200.0.0/16' ; fi
 if [ "${SERVICE_NODE_PORT_RANGE}" = "" ];     then SERVICE_NODE_PORT_RANGE='30000-32767' ; fi
 if [ "${CERT_HOSTNAME}" = "" ];               then CERT_HOSTNAME="127.0.0.1,localhost,10.32.0.1,kubernetes.default" ; fi

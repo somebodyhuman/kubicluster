@@ -12,6 +12,9 @@ case "$1" in
   create-vms)
     ${THE_DIR}/011_on_hypervisor_create_vms.sh "${@:2}"
     ;;
+  create-registry)
+    ${THE_DIR}/041_on_vms_create_registry_nodes.sh "${@:2}"
+    ;;
   create-controllers)
     ${THE_DIR}/021_on_vms_create_controller_nodes.sh "${@:2}"
     ;;
@@ -37,6 +40,7 @@ case "$1" in
     echo "$0 prepare"
     echo "$0 cnc"
     echo "$0 create-vms"
+    echo "$0 create-registry"
     echo "$0 create-controllers"
     echo "$0 create-workers"
     echo "$0 cluster-net"

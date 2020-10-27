@@ -109,6 +109,11 @@ while [[ $# -gt 0 ]]; do
       -kip=*|--kubelet-ip=*)
       CLUSTER_NET_IP="${key#*=}"
       ;;
+# --- 041
+      -r|--registry-node)
+      shift # past the key and to the value
+      REGISTRIES="${REGISTRIES} $1"
+      ;;
 # --- ALL
       -f|--force-update)
       FORCE_UPDATE=true

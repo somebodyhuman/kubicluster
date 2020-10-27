@@ -239,6 +239,24 @@ WORKER_0003=kubi-worker-0003,${VM_CLUSTER_NET}.23,${HYPERVISOR_NET}.23
 ./kubicluster create-workers -c ${CONTROLLER_01} -w ${WORKER_0003}
 ```
 
+If you want to run your own container repository / container registry and / or if you want cache used publicly available containers in a proxy, you can additionally setup one by running:
+```bash
+REGISTRY=kubi-registry-01,${VM_CLUSTER_NET}.2,${HYPERVISOR_NET}.2
+./kubicluster create-vms ${REGISTRY}
+# provide the registry hostname and ip and at least one controller, which will be used to change the default registry of your kubicluster from docker.io/hub.docker.com to your local registry, your local registry will proxy all requests to the standard docker hub and cache container images for increased performance and resistance of your cluster
+
+# if you create the registry after you already have created a controller run:
+./kubicluster create-registry -r ${REGISTRY} -c ${CONTROLLER_01}
+
+# if you create the registry before you create the first controller run:
+./kubicluster create-registry -r ${REGISTRY}
+# .. then add the registry param to the create-controllers call
+./kubicluster create-controllers -c ${CONTROLLER_01} --force-etcd-data-reset -r ${REGISTRY}
+
+```
+
+kubicluster uses Sonatype Nexus OSS by default as it can later be used to host all kinds of packages, libraries and act as a proxy for repositories for several programming language specific libraries.
+
 ### Diving deeper
 
 The kubicluster command and each sub-command show information on how to use it and which environment variables and which command arguments are supported when called with `help`:
@@ -249,6 +267,7 @@ The kubicluster command and each sub-command show information on how to use it a
 ./kubicluster cnc help
 ./kubicluster create-controllers help
 ./kubicluster create-workers help
+./kubicluster create-registry help
 ```
 
 All scripts are written in plain bash/shell. If you dive into them and feel there could be more explanation or a clarifying comment would be helpful in a place that is not yet commented (enough) for beginners, please consider contributing to the community and open a PR.

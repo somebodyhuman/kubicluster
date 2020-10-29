@@ -25,10 +25,10 @@ if [ "${DEBUG}" = true ]; then echo "[DEBUG]: ignored args: ${IGNORED_ARGS}" ; f
 
 # TODO check for essential args and exit if not specified
 
-if [ "$(wget --help| grep 'command not found')" ]; then
+if [ "$(wget --help | grep 'command not found')" ]; then
   apt-get install -y wget
 fi
-if [ "$(tar --help| grep 'command not found')" ]; then
+if [ "$(tar --help | grep 'command not found')" ]; then
   apt-get install -y tar
 fi
 

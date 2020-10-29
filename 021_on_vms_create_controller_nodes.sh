@@ -119,7 +119,7 @@ function install_kubernetes_controllers() {
 source ${DIR}/utils/env-variables "$@"
 
 case "${SUB_CMD}" in
-  'update_scripts_in_nodes')
+  update_scripts_in_nodes)
     update_scripts_in_nodes
     ;;
   update_certs)

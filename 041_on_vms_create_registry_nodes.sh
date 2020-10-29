@@ -2,13 +2,34 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
+
+function update_scripts_in_nodes() {
+  # TODO only update controller scripts
+  for node in ${REGISTRIES}; do
+    name_ip=($(echo $node | tr "," "\n"))
+    echo "syncing scripts dir to node ${name_ip[0]}"
+    ${SSH_CMD} root@${name_ip[2]} "if [ ! -d ${NODE_SCRIPTS_DIR} ]; then mkdir -p ${NODE_SCRIPTS_DIR}; fi"
+    ${SSH_CMD} root@${name_ip[2]} "if [ ! -f /usr/bin/rsync ]; then apt-get install -y rsync; fi"
+    rsync -e "${SSH_CMD}" -av --no-owner --no-group ${SCRIPTS_DIR}/* root@${name_ip[2]}:${NODE_SCRIPTS_DIR}
+  done
+}
+
 function setup_nexus_oss() {
   echo 'setting up nexus oss'
+  for node in ${REGISTRIES}; do
+    name_ip=($(echo $node | tr "," "\n"))
+
+    if [ "${DEBUG}" = true ]; then echo "[DEBUG]: calling: ${SSH_CMD} root@${name_ip[2]} bash ${NODE_SCRIPTS_DIR}/registry/setup_nexus_oss.sh $@ ${NODE_ARGS}" ; fi
+    ${SSH_CMD} root@${name_ip[2]} "${NODE_SCRIPTS_DIR}/registry/setup_nexus_oss.sh $@ ${NODE_ARGS}"
+  done
 }
 
 source ${DIR}/utils/env-variables "$@"
 
 case "${SUB_CMD}" in
+  update_scripts_in_nodes)
+    update_scripts_in_nodes
+    ;;
   setup_nexus_oss)
   # TODO rargs may be removed ?
     setup_nexus_oss "${RARGS_ARRAY[@]}"
@@ -26,6 +47,7 @@ case "${SUB_CMD}" in
     # TODO add less commonly changed env variables from ./utils/env-variables (and make them configurable)
     ;;
   *)
+    update_scripts_in_nodes
     setup_nexus_oss
     ;;
 esac

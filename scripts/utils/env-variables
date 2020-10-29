@@ -22,6 +22,8 @@ if [ "${KUBERNETES_VERSION}" = "" ];  then KUBERNETES_VERSION='1.18.5' ; fi
 ### kubernetes networking
 if [ "${CNI_PLUGINS_VERSION}" = "" ]; then CNI_PLUGINS_VERSION='0.8.6' ; fi
 if [ "${CALICO_VERSION}" = "" ];      then CALICO_VERSION='3.11.3' ; fi
+### repository server used as kubernetes registry
+if [ "${NEXUS_VERSION}" = "" ];       then NEXUS_VERSION='3.28.1-01' ; fi
 
 # on hypervisor and on all nodes
 if [ "${FORCE_UPDATE}" = "" ];                then FORCE_UPDATE=false ; fi
@@ -164,6 +166,9 @@ while [[ $# -gt 0 ]]; do
       -calicov=*|--calico-version=*)
       CALICO_VERSION="${key#*=}"
       ;;
+      -nexusv=*|--nexus-version=*)
+      NEXUS_VERSION="${key#*=}"
+      ;;
       -cidr=*|--cluster-cidr=*)
       CLUSTER_CIDR="${key#*=}"
       ;;
@@ -219,6 +224,7 @@ if [ "${DEBUG}" = true ]; then
   echo "[DEBUG]: KUBERNETES_VERSION =${KUBERNETES_VERSION}"
   echo "[DEBUG]: CNI_PLUGINS_VERSION=${CNI_PLUGINS_VERSION}"
   echo "[DEBUG]: CALICO_VERSION     =${CALICO_VERSION}"
+  echo "[DEBUG]: NEXUS_VERSION      =${NEXUS_VERSION}"
   echo "[DEBUG]: ---"
   echo "[DEBUG]: values of optional hypervisor arguments"
   if [ "${SCRIPTS_DIR}" != "$(realpath ${THIS_DIR}/../scripts)" ];      then echo "[DEBUG]: SCRIPTS_DIR=${SCRIPTS_DIR} (default: $(realpath ${THIS_DIR}/../scripts))"; fi

@@ -1,6 +1,6 @@
 # kubicluster
 
-kubicluster is a bash script collection that helps you setup a kubernetes cluster inside virtual machines from scratch. It's predominant purpose is to help you to learn the ins and outs of kubernetes. You might also use it to use it as an inspirational basis to (semi)-automate your kubernetes cluster management.
+kubicluster is a bash script collection that helps you setup a kubernetes cluster inside virtual machines from scratch. It's predominant purpose is to help you to learn the ins and outs of kubernetes. You might also use it as an inspirational basis to (semi)-automate your kubernetes cluster management.
 
 If you are looking for a more sophisticated, production-ready approach, checkout https://github.com/kubernetes-sigs/kubespray or use kubeadm.
 

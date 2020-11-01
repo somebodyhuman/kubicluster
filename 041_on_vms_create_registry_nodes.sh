@@ -20,7 +20,7 @@ function setup_nexus_oss() {
     name_ip=($(echo $node | tr "," "\n"))
 
     if [ "${DEBUG}" = true ]; then echo "[DEBUG]: calling: ${SSH_CMD} root@${name_ip[2]} bash ${NODE_SCRIPTS_DIR}/registry/setup_nexus_oss.sh $@ ${NODE_ARGS}" ; fi
-    ${SSH_CMD} root@${name_ip[2]} "${NODE_SCRIPTS_DIR}/registry/setup_nexus_oss.sh $@ ${NODE_ARGS}"
+    ${SSH_CMD} root@${name_ip[2]} "${NODE_SCRIPTS_DIR}/registry/setup_nexus_oss.sh $@ ${NODE_ARGS} -kip=${name_ip[1]}"
   done
 }
 

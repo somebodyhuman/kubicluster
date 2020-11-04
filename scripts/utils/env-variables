@@ -57,7 +57,7 @@ if [ "${CALICO_USER}" = "" ];   then CALICO_USER='calico-cni' ; fi
 
 
 REMAINING_ARGS=''
-CONTROLLERS='' ; WORKERS=''
+CONTROLLERS='' ; WORKERS='' ; REGISTRIES=''
 
 
 

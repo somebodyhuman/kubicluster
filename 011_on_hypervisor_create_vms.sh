@@ -14,6 +14,10 @@ function create_vms() {
   OVERALL_EXIT_CODE=0
 
   for vm in ${REMAINING_ARGS}; do
+    echo "$vm is going to be created."
+  done
+
+  for vm in ${REMAINING_ARGS}; do
     vm_name_ip=($(echo $vm | tr "," "\n"))
     VM_XML=${VM_CONFIGS_DIR}/${vm_name_ip[0]}.xml
     VM_FILE=${VIRT_STORAGE_DIR}/${vm_name_ip[0]}.qcow2

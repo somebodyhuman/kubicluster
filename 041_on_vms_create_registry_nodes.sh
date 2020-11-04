@@ -81,17 +81,16 @@ EOF
 
     if [ "${DEBUG}" = true ]; then echo "[DEBUG]: calling: ${SSH_CMD} root@${name_ip[2]} \"${NODE_SCRIPTS_DIR}/registry/setup_nexus_oss.sh ${NODE_ARGS} -kip=${name_ip[1]}\"" ; fi
     ${SSH_CMD} root@${name_ip[2]} "${NODE_SCRIPTS_DIR}/registry/setup_nexus_oss.sh ${NODE_ARGS} -kip=${name_ip[1]}"
-    admin_pw=$(${SSH_CMD} root@${name_ip[2]} "cat /opt/kubicluster/nexus-admin.password")
 
-    for worker in ${WORKERS}; do
-      w_name_ip=($(echo $worker | tr "," "\n"))
-
-      ${SCP_CMD} "${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-fullchain.pem" root@${w_name_ip[2]}:${NODE_CERTS_AND_CONFIGS_DIR}
-      # update worker nodes /etc/containerd/config.toml by (re)running install containerd on them
-      ${SSH_CMD} root@${w_name_ip[2]} "update-ca-certificates --fresh | grep added"
-      ${SCP_CMD} ${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-fullchain.crt root@${w_name_ip[2]}:/usr/local/share/ca-certificates/
-      ${SSH_CMD} root@${w_name_ip[2]} "update-ca-certificates --fresh | grep added"
-    done
+    # for worker in ${WORKERS}; do
+    #   w_name_ip=($(echo $worker | tr "," "\n"))
+    #
+    #   ${SCP_CMD} "${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-fullchain.pem" root@${w_name_ip[2]}:${NODE_CERTS_AND_CONFIGS_DIR}
+    #   # update worker nodes /etc/containerd/config.toml by (re)running install containerd on them
+    #   ${SSH_CMD} root@${w_name_ip[2]} "update-ca-certificates --fresh | grep added"
+    #   ${SCP_CMD} ${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-fullchain.crt root@${w_name_ip[2]}:/usr/local/share/ca-certificates/
+    #   ${SSH_CMD} root@${w_name_ip[2]} "update-ca-certificates --fresh | grep added"
+    # done
   done
 
   # for worker in ${WORKERS}; do
@@ -109,6 +108,23 @@ EOF
   # done
 }
 
+function distribute_certs_to_workers() {
+  for node in ${REGISTRIES}; do
+    name_ip=($(echo $node | tr "," "\n"))
+    # TODO test image pull through registry using pw: admin_pw=$(${SSH_CMD} root@${name_ip[2]} "cat /opt/kubicluster/nexus-admin.password")
+
+    for worker in ${WORKERS}; do
+      w_name_ip=($(echo $worker | tr "," "\n"))
+      # TODO handle -f / force-update correctly
+      ${SCP_CMD} "${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-fullchain.pem" root@${w_name_ip[2]}:${NODE_CERTS_AND_CONFIGS_DIR}
+      # update worker nodes /etc/containerd/config.toml by (re)running install containerd on them
+      ${SSH_CMD} root@${w_name_ip[2]} "update-ca-certificates --fresh | grep added"
+      ${SCP_CMD} ${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-fullchain.crt root@${w_name_ip[2]}:/usr/local/share/ca-certificates/
+      ${SSH_CMD} root@${w_name_ip[2]} "update-ca-certificates --fresh | grep added"
+    done
+  done
+}
+
 source ${DIR}/utils/env-variables "$@"
 
 case "${SUB_CMD}" in
@@ -118,6 +134,9 @@ case "${SUB_CMD}" in
   setup_nexus_oss)
   # TODO rargs may be removed ?
     setup_nexus_oss "${RARGS_ARRAY[@]}"
+    ;;
+  distribute_certs_to_workers)
+    distribute_certs_to_workers
     ;;
   help)
     echo -e "\nDefault usage:\nkubicluster create-registry -r [REGISTRY_HOSTNAME],[REGISTRY_CLUSTER_NET_IP],[REGISTRY_HYPERVISOR_NET_IP] [OPTIONAL_ARGUMENTS]\n\t This executes all subcommands in order"
@@ -134,5 +153,6 @@ case "${SUB_CMD}" in
   *)
     update_scripts_in_nodes
     setup_nexus_oss
+    distribute_certs_to_workers
     ;;
 esac

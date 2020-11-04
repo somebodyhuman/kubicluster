@@ -52,7 +52,7 @@ function install_runc() {
   for node in ${WORKERS}; do
     name_ip=($(echo $node | tr "," "\n"))
 
-    ${SSH_CMD} root@${name_ip[2]} "bash -x ${NODE_SCRIPTS_DIR}/worker/setup_runc.sh ${NODE_ARGS}"
+    ${SSH_CMD} root@${name_ip[2]} "${NODE_SCRIPTS_DIR}/worker/setup_runc.sh ${NODE_ARGS}"
   done
 
   EXEC_ON_ONE_CONTROLLER=false
@@ -166,5 +166,6 @@ case "${SUB_CMD}" in
     install_containerd
     install_kubernetes_workers
     install_cni_calico
+    ${DIR}/kubicluster create-registry distribute_certs_to_workers ${NODE_ARGS}
     ;;
 esac

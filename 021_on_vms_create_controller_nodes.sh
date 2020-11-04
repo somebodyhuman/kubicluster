@@ -118,7 +118,7 @@ function install_kubernetes_controllers() {
 
 function configure_registry_secrets() {
   # we only need to do this on one controller per registry
-  if [ "${CONTROLLERS}" = "" ]; then echo "missing controller argument" ; exit 1 ; fi
+  if [ "${CONTROLLERS}" = "" ]; then echo "[WARN]: missing controller argument to configure registry secrets" ; fi
   all_ctrl_array=($(echo ${CONTROLLERS} | tr " " "\n"))
   ctrl=($(echo ${all_ctrl_array[0]} | tr "," "\n"))
   for r_node in ${REGISTRIES}; do

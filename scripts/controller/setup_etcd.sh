@@ -54,8 +54,8 @@ if [ ! -d ${NODE_WORK_DIR}/etcd-v${ETCD_VERSION} ]; then
 fi
 
 if [ "$(systemctl status etcd.service | grep running)" = "" ] || [ "${FORCE_UPDATE}" = true ]; then
-  if [ -f /usr/local/bin/etcd ]; then rm -f /usr/local/bin/etcd; fi
-  if [ -f /usr/local/bin/etcdctl ]; then rm -f /usr/local/bin/etcdctl; fi
+  if [ -h /usr/local/bin/etcd ]; then rm -f /usr/local/bin/etcd; fi
+  if [ -h /usr/local/bin/etcdctl ]; then rm -f /usr/local/bin/etcdctl; fi
   ln -s ${NODE_WORK_DIR}/etcd-v${ETCD_VERSION}/etcd /usr/local/bin/etcd
   ln -s ${NODE_WORK_DIR}/etcd-v${ETCD_VERSION}/etcdctl /usr/local/bin/etcdctl
 

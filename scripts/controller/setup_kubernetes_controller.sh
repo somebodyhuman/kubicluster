@@ -62,10 +62,10 @@ fi
 
 if [ ! -f /etc/systemd/system/kube-apiserver.service ] || \
    [ "$(systemctl status kube-apiserver.service | grep running)" = "" ] || \
-   [ ! -f /usr/local/bin/kubectl ] || \
+   [ ! -h /usr/local/bin/kubectl ] || \
    [ "${FORCE_UPDATE}" = true ]; then
-  if [ -f /usr/local/bin/kube-apiserver ]; then rm -f /usr/local/bin/kube-apiserver; fi
-  if [ -f /usr/local/bin/kubectl ]; then rm -f /usr/local/bin/kubectl; fi
+  if [ -h /usr/local/bin/kube-apiserver ]; then rm -f /usr/local/bin/kube-apiserver; fi
+  if [ -h /usr/local/bin/kubectl ]; then rm -f /usr/local/bin/kubectl; fi
   ln -s ${KUBERNETES_SERVER_DIR}/bin/kube-apiserver /usr/local/bin/kube-apiserver
   ln -s ${KUBERNETES_SERVER_DIR}/bin/kubectl /usr/local/bin/kubectl
 
@@ -138,7 +138,7 @@ EOF
 fi
 
 if [ "$(systemctl status kube-controller-manager.service | grep running)" = "" ] || [ "${FORCE_UPDATE}" = true ]; then
-  if [ -f /usr/local/bin/kube-controller-manager ]; then rm -f /usr/local/bin/kube-controller-manager; fi
+  if [ -h /usr/local/bin/kube-controller-manager ]; then rm -f /usr/local/bin/kube-controller-manager; fi
   ln -s ${KUBERNETES_SERVER_DIR}/bin/kube-controller-manager /usr/local/bin/kube-controller-manager
 
   # TODO explain leader-elect
@@ -179,7 +179,7 @@ EOF
 fi
 
 if [ "$(systemctl status kube-scheduler.service | grep running)" = "" ] || [ "${FORCE_UPDATE}" = true ]; then
-  if [ -f /usr/local/bin/kube-scheduler ]; then rm -f /usr/local/bin/kube-scheduler; fi
+  if [ -h /usr/local/bin/kube-scheduler ]; then rm -f /usr/local/bin/kube-scheduler; fi
   ln -s ${KUBERNETES_SERVER_DIR}/bin/kube-scheduler /usr/local/bin/kube-scheduler
 
   cat << EOF | tee ${CERTS_AND_CONFIGS_DIR}/kube-scheduler.yaml

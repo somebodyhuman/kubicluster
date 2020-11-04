@@ -89,7 +89,7 @@ else
 fi
 
 if [ ! -d /opt/cni/bin ]; then mkdir -p /opt/cni/bin; fi
-if [ -f /opt/cni/bin/calico ]; then rm -f /opt/cni/bin/calico; fi
-if [ -f /opt/cni/bin/calico-ipam ]; then rm -f /opt/cni/bin/calico-ipam; fi
+if [ -h /opt/cni/bin/calico ]; then rm -f /opt/cni/bin/calico; fi
+if [ -h /opt/cni/bin/calico-ipam ]; then rm -f /opt/cni/bin/calico-ipam; fi
 ln -s ${NODE_WORK_DIR}/calico-${CALICO_VERSION} /opt/cni/bin/calico
 ln -s ${NODE_WORK_DIR}/calico-ipam-${CALICO_VERSION} /opt/cni/bin/calico-ipam

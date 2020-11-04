@@ -35,13 +35,13 @@ if [ ! -f /etc/systemd/system/kubelet.service ] || \
    [ "$(systemctl status kubelet.service | grep running)" = "" ] || \
    [ ! -f /etc/systemd/system/kube-proxy.service ] || \
    [ "$(systemctl status kube-proxy.service | grep running)" = "" ] || \
-   [ ! -f /usr/local/bin/kubelet ] || \
-   [ ! -f /usr/local/bin/kube-proxy ] || \
-   [ ! -f /usr/local/bin/kubectl ] || \
+   [ ! -h /usr/local/bin/kubelet ] || \
+   [ ! -h /usr/local/bin/kube-proxy ] || \
+   [ ! -h /usr/local/bin/kubectl ] || \
    [ "${FORCE_UPDATE}" = true ]; then
-  if [ -f /usr/local/bin/kubelet ]; then rm -f /usr/local/bin/kubelet; fi
-  if [ -f /usr/local/bin/kube-proxy ]; then rm -f /usr/local/bin/kube-proxy; fi
-  if [ -f /usr/local/bin/kubectl ]; then rm -f /usr/local/bin/kubectl; fi
+  if [ -h /usr/local/bin/kubelet ]; then rm -f /usr/local/bin/kubelet; fi
+  if [ -h /usr/local/bin/kube-proxy ]; then rm -f /usr/local/bin/kube-proxy; fi
+  if [ -h /usr/local/bin/kubectl ]; then rm -f /usr/local/bin/kubectl; fi
   ln -s ${KUBERNETES_SERVER_DIR}/bin/kubelet /usr/local/bin/kubelet
   ln -s ${KUBERNETES_SERVER_DIR}/bin/kube-proxy /usr/local/bin/kube-proxy
   ln -s ${KUBERNETES_SERVER_DIR}/bin/kubectl /usr/local/bin/kubectl

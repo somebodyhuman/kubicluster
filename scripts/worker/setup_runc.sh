@@ -16,7 +16,7 @@ if [ ! -f ${NODE_WORK_DIR}/runc-v${RUNC_VERSION}.amd64 ]; then
   chmod +x ${NODE_WORK_DIR}/runc-v${RUNC_VERSION}.amd64
 fi
 
-if [ ! -f /usr/local/bin/runc ] || [ "${FORCE_UPDATE}" = true ]; then
-  if [ -f /usr/local/bin/runc ]; then rm -f /usr/local/bin/runc; fi
+if [ ! -h /usr/local/bin/runc ] || [ "${FORCE_UPDATE}" = true ]; then
+  if [ -h /usr/local/bin/runc ]; then rm -f /usr/local/bin/runc; fi
   ln -s ${NODE_WORK_DIR}/runc-v${RUNC_VERSION}.amd64 /usr/local/bin/runc
 fi

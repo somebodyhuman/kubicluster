@@ -93,9 +93,6 @@ if [ ! -f /etc/containerd/config.toml ] || [ "${FORCE_UPDATE}" = true ]; then
       echo '    [plugins.cri.registry.configs]' >>${NODE_CERTS_AND_CONFIGS_DIR}/config-registries.toml
     fi
     #TODO allow port to be configured
-    echo '    [plugins.cri.registry.mirrors]' >>${NODE_CERTS_AND_CONFIGS_DIR}/config-registries.toml
-    [plugins.cri.registry.configs."192.168.24.3:6666".tls]
-        ca_file = "/opt/kubicluster/certs_and_configs/nexus-fullchain.pem"
     echo "      [plugins.cri.registry.configs.\"${name_ip[1]}:6666\".tls]" >>${NODE_CERTS_AND_CONFIGS_DIR}/config-registries.toml
     echo "        ca_file = \"${NODE_CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-fullchain.pem\"" >>${NODE_CERTS_AND_CONFIGS_DIR}/config-registries.toml
   done

@@ -9,7 +9,7 @@ function update_scripts_in_nodes() {
     echo "syncing scripts dir to node ${name_ip[0]}"
     ${SSH_CMD} root@${name_ip[2]} "if [ ! -d ${NODE_SCRIPTS_DIR} ]; then mkdir -p ${NODE_SCRIPTS_DIR}; fi"
     ${SSH_CMD} root@${name_ip[2]} "if [ ! -f /usr/bin/rsync ]; then apt-get update ; apt-get install -y rsync; fi"
-    echo ${RSYNC_CMD}
+    # echo "executing: rsync -e \"${SSH_CMD}\" -av --no-owner --no-group ${SCRIPTS_DIR}/* root@${name_ip[2]}:${NODE_SCRIPTS_DIR}"
     rsync -e "${SSH_CMD}" -av --no-owner --no-group ${SCRIPTS_DIR}/* root@${name_ip[2]}:${NODE_SCRIPTS_DIR}
   done
 }

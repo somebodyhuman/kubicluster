@@ -56,7 +56,7 @@ fi
 if [ ! -f /usr/local/bin/containerd ] || \
    [ "${FORCE_UPDATE}" = true ]; then
   for item in containerd containerd-shim containerd-shim-runc-v1 containerd-shim-runc-v2 containerd-stress ctr; do
-    if [ -f /usr/local/bin/${item} ]; then rm -f /usr/local/bin/${item} ; fi
+    if [ -h /usr/local/bin/${item} ]; then rm -f /usr/local/bin/${item} ; fi
     ln -s ${CONTAINERD_DIR}/bin/${item} /usr/local/bin/${item}
   done
 fi
@@ -72,8 +72,35 @@ fi
 # configure containerd
 if [ ! -f /etc/containerd/config.toml ] || [ "${FORCE_UPDATE}" = true ]; then
   mkdir -p /etc/containerd/
-  cat << EOF | tee /etc/containerd/config.toml
-[plugins]
+  rm -f ${NODE_CERTS_AND_CONFIGS_DIR}/config-*.toml
+
+  echo '[plugins]' >${NODE_CERTS_AND_CONFIGS_DIR}/config-before-registries.toml
+
+  for node in ${REGISTRIES}; do
+    name_ip=($(echo $node | tr "," "\n"))
+    if [ ! -e ${NODE_CERTS_AND_CONFIGS_DIR}/config-registries-mirrors.toml ]; then
+      echo '  [plugins.cri.registry]' >${NODE_CERTS_AND_CONFIGS_DIR}/config-registries-mirrors.toml
+      echo '    [plugins.cri.registry.mirrors]' >>${NODE_CERTS_AND_CONFIGS_DIR}/config-registries-mirrors.toml
+    fi
+    #TODO allow port to be configured
+    echo "      [plugins.cri.registry.mirrors.\"${name_ip[1]}:6666\"]" >>${NODE_CERTS_AND_CONFIGS_DIR}/config-registries-mirrors.toml
+    echo "        endpoint = [\"https://${name_ip[1]}:6666\"]" >>${NODE_CERTS_AND_CONFIGS_DIR}/config-registries-mirrors.toml
+  done
+
+  for node in ${REGISTRIES}; do
+    name_ip=($(echo $node | tr "," "\n"))
+    if [ ! -e ${NODE_CERTS_AND_CONFIGS_DIR}/config-registries.toml ]; then
+      echo '    [plugins.cri.registry.configs]' >>${NODE_CERTS_AND_CONFIGS_DIR}/config-registries.toml
+    fi
+    #TODO allow port to be configured
+    echo '    [plugins.cri.registry.mirrors]' >>${NODE_CERTS_AND_CONFIGS_DIR}/config-registries.toml
+    [plugins.cri.registry.configs."192.168.24.3:6666".tls]
+        ca_file = "/opt/kubicluster/certs_and_configs/nexus-fullchain.pem"
+    echo "      [plugins.cri.registry.configs.\"${name_ip[1]}:6666\".tls]" >>${NODE_CERTS_AND_CONFIGS_DIR}/config-registries.toml
+    echo "        ca_file = \"${NODE_CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-fullchain.pem\"" >>${NODE_CERTS_AND_CONFIGS_DIR}/config-registries.toml
+  done
+
+  cat << EOF | tee ${NODE_CERTS_AND_CONFIGS_DIR}/config-after-registries.toml
   [plugins.cri.containerd]
     no_pivot = false
 
@@ -98,6 +125,11 @@ if [ ! -f /etc/containerd/config.toml ] || [ "${FORCE_UPDATE}" = true ]; then
     # conf_dir is the directory in which the admin places a CNI conf.
     conf_dir = "${CNI_CONF_DIR}"
 EOF
+
+  cat ${NODE_CERTS_AND_CONFIGS_DIR}/config-before-registries.toml \
+      ${NODE_CERTS_AND_CONFIGS_DIR}/config-registries-mirrors.toml \
+      ${NODE_CERTS_AND_CONFIGS_DIR}/config-registries.toml \
+      ${NODE_CERTS_AND_CONFIGS_DIR}/config-after-registries.toml >/etc/containerd/config.toml
 fi
 
 if [ ! -f /etc/systemd/system/containerd.service ] || \

@@ -246,12 +246,15 @@ REGISTRY=kubi-registry-01,${VM_CLUSTER_NET}.2,${HYPERVISOR_NET}.2
 # provide the registry hostname and ip and at least one controller, which will be used to change the default registry of your kubicluster from docker.io/hub.docker.com to your local registry, your local registry will proxy all requests to the standard docker hub and cache container images for increased performance and resistance of your cluster
 
 # if you create the registry after you already have created a controller run:
-./kubicluster create-registry -r ${REGISTRY} -c ${CONTROLLER_01}
+./kubicluster create-registry -r ${REGISTRY} -c ${CONTROLLER_01} -w ${WORKER_0003}
 
 # if you create the registry before you create the first controller run:
 ./kubicluster create-registry -r ${REGISTRY}
-# .. then add the registry param to the create-controllers call
+# .. then add the registry param to
+# the create-controllers call (to declare the secrets for the registry access properly)
+# AND (!!!) to the create workers call (to configure containerd to be able to use the registry)
 ./kubicluster create-controllers -c ${CONTROLLER_01} --force-etcd-data-reset -r ${REGISTRY}
+./kubicluster create-workers -c ${CONTROLLER_01} -w ${WORKER_0003} -r ${REGISTRY}
 
 ```
 

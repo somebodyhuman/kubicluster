@@ -116,6 +116,18 @@ function install_kubernetes_controllers() {
   done
 }
 
+function configure_registry_secrets() {
+  # we only need to do this on one controller per registry
+  if [ "${CONTROLLERS}" = "" ]; then echo "missing controller argument" ; exit 1 ; fi
+  all_ctrl_array=($(echo ${CONTROLLERS} | tr " " "\n"))
+  ctrl=($(echo ${all_ctrl_array[0]} | tr "," "\n"))
+  for r_node in ${REGISTRIES}; do
+    name_ip=($(echo $r_node | tr "," "\n"))
+    pw=$(${SSH_CMD} root@${name_ip[2]} "cat /opt/kubicluster/nexus-admin.password")
+    ${SSH_CMD} root@${ctrl[2]} "kubectl create secret docker-registry ${name_ip[0]} --docker-server=https://${name_ip[1]}:6666 --docker-username=admin --docker-password=${pw} --docker-email=kubicluster@example.com"
+  done
+}
+
 source ${DIR}/utils/env-variables "$@"
 
 case "${SUB_CMD}" in
@@ -136,6 +148,9 @@ case "${SUB_CMD}" in
   install_kubernetes_controllers)
     # TODO check for essential args and exit if not specified
     install_kubernetes_controllers
+    ;;
+  configure_registry_secrets)
+    configure_registry_secrets
     ;;
   help)
     echo -e "\nDefault usage:\nkubicluster create-controllers [OPTIONAL_ARGUMENTS]\n\t This executes all subcommands in order"

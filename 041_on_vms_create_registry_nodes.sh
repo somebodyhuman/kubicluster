@@ -4,7 +4,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 
 function update_scripts_in_nodes() {
-  # TODO only update controller scripts
+  # TODO only update registry scripts
   for node in ${REGISTRIES}; do
     name_ip=($(echo $node | tr "," "\n"))
     echo "syncing scripts dir to node ${name_ip[0]}"
@@ -19,9 +19,94 @@ function setup_nexus_oss() {
   for node in ${REGISTRIES}; do
     name_ip=($(echo $node | tr "," "\n"))
 
-    if [ "${DEBUG}" = true ]; then echo "[DEBUG]: calling: ${SSH_CMD} root@${name_ip[2]} bash ${NODE_SCRIPTS_DIR}/registry/setup_nexus_oss.sh $@ ${NODE_ARGS}" ; fi
-    ${SSH_CMD} root@${name_ip[2]} "${NODE_SCRIPTS_DIR}/registry/setup_nexus_oss.sh $@ ${NODE_ARGS} -kip=${name_ip[1]}"
+    if [ ! -e ${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-csr.conf ] || \
+       [ "${FORCE_UPDATE}" = true ]; then
+
+      cat << EOF | tee ${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-csr.conf
+[ req ]
+prompt = no
+distinguished_name = req_distinguished_name
+x509_extensions = san_self_signed
+
+[ req_distinguished_name ]
+CN=${name_ip[0]}-nexus
+subjectAltName = @alt_names
+
+[ san_self_signed ]
+subjectAltName = @alt_names
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+basicConstraints = CA:true
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment, dataEncipherment, keyCertSign, cRLSign
+extendedKeyUsage = serverAuth, clientAuth, timeStamping
+
+[ req_ext ]
+subjectAltName = @alt_names
+
+[ v3_ca ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1   = localhost
+IP.1    = 127.0.0.1
+IP.2    = ${name_ip[1]}
+EOF
+
+    fi
+    if [ ! -e ${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-fullchain.pem ] || \
+       [ ! -e ${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-privkey.pem ] || \
+       [ "${FORCE_UPDATE}" = true ]; then
+      openssl req \
+        -extensions san_self_signed \
+        -newkey rsa:2048 -nodes \
+        -keyout "${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-privkey.pem" \
+        -x509 -sha256 -days 3650 \
+        -config <(cat ${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-csr.conf) \
+        -out "${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-fullchain.pem"
+      openssl x509 -noout -text -in "${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-fullchain.pem"
+    fi
+
+    if [ ! -e ${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-fullchain.crt ] || \
+       [ "${FORCE_UPDATE}" = true ]; then
+      openssl x509 -inform PEM -in "${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-fullchain.pem" -out "${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-fullchain.crt"
+    fi
+
+    ${SSH_CMD} root@${name_ip[2]} "if [ ! -d ${NODE_CERTS_AND_CONFIGS_DIR} ]; then mkdir -p ${NODE_CERTS_AND_CONFIGS_DIR}; fi"
+    ${SCP_CMD} ${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-privkey.pem root@${name_ip[2]}:${NODE_CERTS_AND_CONFIGS_DIR}/nexus-privkey.pem
+    ${SCP_CMD} ${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-fullchain.pem root@${name_ip[2]}:${NODE_CERTS_AND_CONFIGS_DIR}/nexus-fullchain.pem
+    ${SSH_CMD} root@${name_ip[2]} "update-ca-certificates --fresh | grep added"
+    ${SCP_CMD} ${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-fullchain.crt root@${name_ip[2]}:/usr/local/share/ca-certificates/nexus-fullchain.crt
+    ${SSH_CMD} root@${name_ip[2]} "update-ca-certificates --fresh | grep added"
+    # TODO check that cert really got added
+
+    if [ "${DEBUG}" = true ]; then echo "[DEBUG]: calling: ${SSH_CMD} root@${name_ip[2]} \"${NODE_SCRIPTS_DIR}/registry/setup_nexus_oss.sh ${NODE_ARGS} -kip=${name_ip[1]}\"" ; fi
+    ${SSH_CMD} root@${name_ip[2]} "${NODE_SCRIPTS_DIR}/registry/setup_nexus_oss.sh ${NODE_ARGS} -kip=${name_ip[1]}"
+    admin_pw=$(${SSH_CMD} root@${name_ip[2]} "cat /opt/kubicluster/nexus-admin.password")
+
+    for worker in ${WORKERS}; do
+      w_name_ip=($(echo $worker | tr "," "\n"))
+
+      ${SCP_CMD} "${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-fullchain.pem" root@${w_name_ip[2]}:${NODE_CERTS_AND_CONFIGS_DIR}
+      # update worker nodes /etc/containerd/config.toml by (re)running install containerd on them
+      ${SSH_CMD} root@${w_name_ip[2]} "update-ca-certificates --fresh | grep added"
+      ${SCP_CMD} ${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-fullchain.crt root@${w_name_ip[2]}:/usr/local/share/ca-certificates/
+      ${SSH_CMD} root@${w_name_ip[2]} "update-ca-certificates --fresh | grep added"
+    done
   done
+
+  # for worker in ${WORKERS}; do
+  #   w_name_ip=($(echo $worker | tr "," "\n"))
+  #
+  #   ${SCP_CMD} "${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-nexus-fullchain.pem" root@${w_name_ip[2]}:${NODE_CERTS_AND_CONFIGS_DIR}
+  #   ${SSH_CMD} root@${w_name_ip[2]} "${NODE_SCRIPTS_DIR}/worker/setup_containerd.sh ${NODE_ARGS}"
+  #   # update worker nodes /etc/containerd/config.toml by (re)running install containerd on them
+  #   ${SSH_CMD} root@${w_name_ip[2]} "update-ca-certificates --fresh | grep added"
+  #   ${SCP_CMD} ${CERTS_AND_CONFIGS_DIR}/${name_ip[0]}-fullchain.crt root@${w_name_ip[2]}:/usr/local/share/ca-certificates/
+  #   ${SSH_CMD} root@${w_name_ip[2]} "update-ca-certificates --fresh | grep added"
+  ${DIR}/kubicluster create-controllers configure_registry_secrets ${NODE_ARGS}
+  ${DIR}/kubicluster create-workers update_scripts_in_nodes ${NODE_ARGS}
+  ${DIR}/kubicluster create-workers install_containerd ${NODE_ARGS} -f
+  # done
 }
 
 source ${DIR}/utils/env-variables "$@"

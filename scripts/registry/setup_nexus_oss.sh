@@ -55,20 +55,20 @@ if [ ! -d ${NODE_WORK_DIR}/nexus-${NEXUS_VERSION} ]; then
   chown -R nexus:nexus ${NODE_WORK_DIR}/nexus-${NEXUS_VERSION}
 fi
 
-if [ ! -e ${NODE_WORK_DIR}/nexus ] || \
+if [ ! -h ${NODE_WORK_DIR}/nexus ] || \
    [ "${FORCE_UPDATE}" = true ]; then
      # TODO use -e instead of -d or -f on symbolic link existence checks in other scripts as well
-    if [ -e ${NODE_WORK_DIR}/nexus ]; then rm -f ${NODE_WORK_DIR}/nexus; fi
+    if [ -h ${NODE_WORK_DIR}/nexus ]; then rm -f ${NODE_WORK_DIR}/nexus; fi
     ln -s ${NODE_WORK_DIR}/nexus-${NEXUS_VERSION}/nexus-${NEXUS_VERSION} ${NODE_WORK_DIR}/nexus
 fi
 
-if [ ! -e ${NODE_WORK_DIR}/sonatype-work ] || \
+if [ ! -h ${NODE_WORK_DIR}/sonatype-work ] || \
    [ "${FORCE_UPDATE}" = true ]; then
-    if [ -e ${NODE_WORK_DIR}/sonatype-work ]; then rm -f ${NODE_WORK_DIR}/sonatype-work; fi
+    if [ -h ${NODE_WORK_DIR}/sonatype-work ]; then rm -f ${NODE_WORK_DIR}/sonatype-work; fi
     ln -s ${NODE_WORK_DIR}/nexus-${NEXUS_VERSION}/sonatype-work ${NODE_WORK_DIR}/sonatype-work
 fi
 
-if ! grep nexus ${NODE_WORK_DIR}/nexus/bin/nexus.rc ; then
+if [ ! -f ${NODE_WORK_DIR}/nexus/bin/nexus.rc ] || ! grep nexus ${NODE_WORK_DIR}/nexus/bin/nexus.rc ; then
   echo "run_as_user=\"nexus\"" >>${NODE_WORK_DIR}/nexus/bin/nexus.rc
 fi
 
@@ -159,7 +159,7 @@ if [ ! -f ${NODE_WORK_DIR}/nexus-scripting-examples/simple-shell-example/docker.
 {
   "name": "docker",
   "type": "groovy",
-  "content": "repository.createDockerHosted('docker-internal', 4448, null); repository.createDockerProxy('docker-io','https://hub.docker.com', 'HUB', null, null, null); repository.createDockerGroup('docker-all', 4444, null, ['docker-io','docker-internal'])"
+  "content": "repository.createDockerHosted('docker-internal', 4448, null); repository.createDockerProxy('docker-io','https://registry-1.docker.io', 'HUB', null, null, null); repository.createDockerGroup('docker-all', 4444, null, ['docker-io','docker-internal'])"
 }
 EOF
 fi
@@ -177,49 +177,49 @@ chown nexus:nexus ${NODE_WORK_DIR}/sonatype-work/nexus3/etc/nexus.properties
 systemctl restart nexus.service
 wait_for_startup_to_complete
 
-fn=nexus-https
-mkdir -p ${NODE_WORK_DIR}/nginx/${fn}
-
-cat << EOF | tee ${NODE_WORK_DIR}/nginx/${fn}/csr.conf
-[ req ]
-prompt = no
-distinguished_name = req_distinguished_name
-x509_extensions = san_self_signed
-
-[ req_distinguished_name ]
-CN=${fn}
-subjectAltName = @alt_names
-
-[ san_self_signed ]
-subjectAltName = @alt_names
-subjectKeyIdentifier = hash
-authorityKeyIdentifier = keyid:always,issuer
-basicConstraints = CA:true
-keyUsage = nonRepudiation, digitalSignature, keyEncipherment, dataEncipherment, keyCertSign, cRLSign
-extendedKeyUsage = serverAuth, clientAuth, timeStamping
-
-[ req_ext ]
-subjectAltName = @alt_names
-
-[ v3_ca ]
-subjectAltName = @alt_names
-
-[ alt_names ]
-DNS.1   = localhost
-IP.1    = 127.0.0.1
-IP.2    = ${CLUSTER_NET_IP}
-EOF
-
-
-
-openssl req \
-  -extensions san_self_signed \
-  -newkey rsa:2048 -nodes \
-  -keyout "${NODE_WORK_DIR}/nginx/${fn}/privkey.pem" \
-  -x509 -sha256 -days 3650 \
-  -config <(cat ${NODE_WORK_DIR}/nginx/${fn}/csr.conf) \
-  -out "${NODE_WORK_DIR}/nginx/${fn}/fullchain.pem"
-openssl x509 -noout -text -in "${NODE_WORK_DIR}/nginx/${fn}/fullchain.pem"
+# fn=nexus-https
+# mkdir -p ${NODE_WORK_DIR}/nginx/${fn}
+#
+# cat << EOF | tee ${NODE_WORK_DIR}/nginx/${fn}/csr.conf
+# [ req ]
+# prompt = no
+# distinguished_name = req_distinguished_name
+# x509_extensions = san_self_signed
+#
+# [ req_distinguished_name ]
+# CN=${fn}
+# subjectAltName = @alt_names
+#
+# [ san_self_signed ]
+# subjectAltName = @alt_names
+# subjectKeyIdentifier = hash
+# authorityKeyIdentifier = keyid:always,issuer
+# basicConstraints = CA:true
+# keyUsage = nonRepudiation, digitalSignature, keyEncipherment, dataEncipherment, keyCertSign, cRLSign
+# extendedKeyUsage = serverAuth, clientAuth, timeStamping
+#
+# [ req_ext ]
+# subjectAltName = @alt_names
+#
+# [ v3_ca ]
+# subjectAltName = @alt_names
+#
+# [ alt_names ]
+# DNS.1   = localhost
+# IP.1    = 127.0.0.1
+# IP.2    = ${CLUSTER_NET_IP}
+# EOF
+#
+#
+#
+# openssl req \
+#   -extensions san_self_signed \
+#   -newkey rsa:2048 -nodes \
+#   -keyout "${NODE_WORK_DIR}/nginx/${fn}/privkey.pem" \
+#   -x509 -sha256 -days 3650 \
+#   -config <(cat ${NODE_WORK_DIR}/nginx/${fn}/csr.conf) \
+#   -out "${NODE_WORK_DIR}/nginx/${fn}/fullchain.pem"
+# openssl x509 -noout -text -in "${NODE_WORK_DIR}/nginx/${fn}/fullchain.pem"
 
 
 # install docker and nginx - we can uninstall docker at the end - it's only there to test the registry connection
@@ -243,10 +243,10 @@ mkdir -p /etc/docker/certs.d/${CLUSTER_NET_IP}:443
 mkdir -p /etc/docker/certs.d/${CLUSTER_NET_IP}:6666
 mkdir -p /etc/docker/certs.d/${CLUSTER_NET_IP}:6668
 
-cp -f ${NODE_WORK_DIR}/nginx/${fn}/fullchain.pem /etc/docker/certs.d/${CLUSTER_NET_IP}/
-cp -f ${NODE_WORK_DIR}/nginx/${fn}/fullchain.pem /etc/docker/certs.d/${CLUSTER_NET_IP}:443/
-cp -f ${NODE_WORK_DIR}/nginx/${fn}/fullchain.pem /etc/docker/certs.d/${CLUSTER_NET_IP}:6666/
-cp -f ${NODE_WORK_DIR}/nginx/${fn}/fullchain.pem /etc/docker/certs.d/${CLUSTER_NET_IP}:6668/
+cp -f ${NODE_CERTS_AND_CONFIGS_DIR}/nexus-fullchain.pem /etc/docker/certs.d/${CLUSTER_NET_IP}/
+cp -f ${NODE_CERTS_AND_CONFIGS_DIR}/nexus-fullchain.pem /etc/docker/certs.d/${CLUSTER_NET_IP}:443/
+cp -f ${NODE_CERTS_AND_CONFIGS_DIR}/nexus-fullchain.pem /etc/docker/certs.d/${CLUSTER_NET_IP}:6666/
+cp -f ${NODE_CERTS_AND_CONFIGS_DIR}/nexus-fullchain.pem /etc/docker/certs.d/${CLUSTER_NET_IP}:6668/
 
 echo "{ \"insecure-registries\": [\"${CLUSTER_NET_IP}\", \"${CLUSTER_NET_IP}:6666\"] }" >/etc/docker/daemon.json
 
@@ -261,7 +261,7 @@ server {
 
     location / {
         proxy_pass http://localhost:8081;
-	proxy_set_header Host \$host:\$server_port;
+        proxy_set_header Host \$host:\$server_port;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto http;
@@ -272,13 +272,13 @@ server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
     server_name "~^\d+\.\d+\.\d+\.\d+\$" localhost;
-    ssl_certificate ${NODE_WORK_DIR}/nginx/${fn}/fullchain.pem;
-    ssl_certificate_key ${NODE_WORK_DIR}/nginx/${fn}/privkey.pem;
+    ssl_certificate ${NODE_CERTS_AND_CONFIGS_DIR}/nexus-fullchain.pem;
+    ssl_certificate_key ${NODE_CERTS_AND_CONFIGS_DIR}/nexus-privkey.pem;
     client_max_body_size 0;
 
     location / {
         proxy_pass http://localhost:8081;
-	      proxy_set_header Host \$host:\$server_port;
+        proxy_set_header Host \$host:\$server_port;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto https;
@@ -291,8 +291,8 @@ server {
     server_name "~^\d+\.\d+\.\d+\.\d+\$" localhost;
     keepalive_timeout 60;
     ssl on;
-    ssl_certificate ${NODE_WORK_DIR}/nginx/${fn}/fullchain.pem;
-    ssl_certificate_key ${NODE_WORK_DIR}/nginx/${fn}/privkey.pem;
+    ssl_certificate ${NODE_CERTS_AND_CONFIGS_DIR}/nexus-fullchain.pem;
+    ssl_certificate_key ${NODE_CERTS_AND_CONFIGS_DIR}/nexus-privkey.pem;
     ssl_ciphers HIGH:!kEDH:!ADH:!MD5:@STRENGTH;
     ssl_session_cache shared:TLSSSL:16m;
     ssl_session_timeout 10m;
@@ -318,8 +318,8 @@ server {
     server_name "~^\d+\.\d+\.\d+\.\d+\$" localhost;
     keepalive_timeout 60;
     ssl on;
-    ssl_certificate ${NODE_WORK_DIR}/nginx/${fn}/fullchain.pem;
-    ssl_certificate_key ${NODE_WORK_DIR}/nginx/${fn}/privkey.pem;
+    ssl_certificate ${NODE_CERTS_AND_CONFIGS_DIR}/nexus-fullchain.pem;
+    ssl_certificate_key ${NODE_CERTS_AND_CONFIGS_DIR}/nexus-privkey.pem;
     ssl_ciphers HIGH:!kEDH:!ADH:!MD5:@STRENGTH;
     ssl_session_cache shared:TLSSSL:16m;
     ssl_session_timeout 10m;
@@ -343,7 +343,7 @@ EOF
 
 systemctl restart nginx.service
 
-mkdir ~/.docker
+if [ ! -d ~/.docker ] ; then mkdir ~/.docker ; fi
 echo "{ \"auths\": { \"${CLUSTER_NET_IP}:6666\": { \"auth\": \"$(echo -n "admin:$(cat /opt/kubicluster/nexus-admin.password)" | base64)\" } } }" >~/.docker/config.json
 
 timeout 10s bash <<EOT

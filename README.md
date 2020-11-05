@@ -241,20 +241,32 @@ WORKER_0003=kubi-worker-0003,${VM_CLUSTER_NET}.23,${HYPERVISOR_NET}.23
 
 If you want to run your own container repository / container registry and / or if you want cache used publicly available containers in a proxy, you can additionally setup one by running:
 ```bash
+# if not already set in your current shell, set the following according to your cluster
+HYPERVISOR_NET=192.168.122
+VM_CLUSTER_NET=192.168.24
+CONTROLLER_01=kubi-controller-01,${VM_CLUSTER_NET}.11,${HYPERVISOR_NET}.11
+WORKER_0001=kubi-worker-0001,${VM_CLUSTER_NET}.21,${HYPERVISOR_NET}.21
+WORKER_0002=kubi-worker-0002,${VM_CLUSTER_NET}.22,${HYPERVISOR_NET}.22
+
 REGISTRY=kubi-registry-01,${VM_CLUSTER_NET}.2,${HYPERVISOR_NET}.2
-./kubicluster create-vms ${REGISTRY}
+
+./kubicluster create-vms ${CONTROLLER_01} ${WORKER_0001} ${WORKER_0002} -ndev
+./kubicluster create-controllers -c ${CONTROLLER_01} --force-etcd-data-reset
+./kubicluster create-vms ${REGISTRY} --mem=4194304 --cpus=2 # this respects nexus OSS minimum system requirements
+./kubicluster create-registry -r ${REGISTRY} -c ${CONTROLLER_01}
+./kubicluster create-workers -c ${CONTROLLER_01} -w ${WORKER_0001} -w ${WORKER_0002} -r ${REGISTRY}
 # provide the registry hostname and ip and at least one controller, which will be used to change the default registry of your kubicluster from docker.io/hub.docker.com to your local registry, your local registry will proxy all requests to the standard docker hub and cache container images for increased performance and resistance of your cluster
 
-# if you create the registry after you already have created a controller run:
-./kubicluster create-registry -r ${REGISTRY} -c ${CONTROLLER_01} -w ${WORKER_0003}
+# if you create the registry after you already have created controllers and/or workers run:
+./kubicluster create-registry -r ${REGISTRY} -c ${CONTROLLER_01} -w ${WORKER_0003} -w ...
 
 # if you create the registry before you create the first controller run:
 ./kubicluster create-registry -r ${REGISTRY}
 # .. then add the registry param to
 # the create-controllers call (to declare the secrets for the registry access properly)
 # AND (!!!) to the create workers call (to configure containerd to be able to use the registry)
-./kubicluster create-controllers -c ${CONTROLLER_01} --force-etcd-data-reset -r ${REGISTRY}
-./kubicluster create-workers -c ${CONTROLLER_01} -w ${WORKER_0003} -r ${REGISTRY}
+./kubicluster create-controllers -c ${CONTROLLER_01} --force-etcd-data-reset -r ${REGISTRY} #one controller is enough
+./kubicluster create-workers -c ${CONTROLLER_01} -w ${WORKER_0001} -w ${WORKER_0002} -r ${REGISTRY} # all workers must be listed
 
 ```
 
@@ -318,6 +330,14 @@ kubectl delete daemonset calico-node -n kube-system
 kubectl delete deployment calico-kube-controllers -n kube-system
 # then re-run
 /kubicluster create-workers ...
+```
+
+## Connect to your controllers using kubectl on hypervisor
+
+Use the generated admin config to execute kubectl commands on your cluster from your hypervisor:
+
+```bash
+./work/tools/kubernetes-${KUBERNETES_VERSION}/kubernetes/client/bin/kubectl --kubeconfig=./work/certs_and_configs/admin.kubeconfig
 ```
 
 ## Road Map
